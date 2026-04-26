@@ -38,21 +38,20 @@ export default function SettingsPage() {
     setLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
 
-    const { data: fam, error } = await supabase
-      .from('families')
-      .insert({ name: newFamilyName.trim() })
-      .select()
-      .single()
+    const { data: newFamilyId, error } = await supabase
+      .rpc('create_family', { family_name: newFamilyName.trim() })
 
-    if (!error && fam) {
-      await supabase.from('family_members').insert({
-        family_id: fam.id,
-        user_id: user!.id,
-        role: 'admin',
-      })
-      setFamily({ ...family, families: fam, role: 'admin', family_id: fam.id })
+    if (!error && newFamilyId) {
+      const { data: fam } = await supabase
+        .from('families')
+        .select('*')
+        .eq('id', newFamilyId)
+        .single()
+      setFamily({ families: fam, role: 'admin', family_id: newFamilyId })
       setNewFamilyName('')
       setMessage('Family created!')
+    } else if (error) {
+      setMessage('Error: ' + error.message)
     }
     setLoading(false)
   }
