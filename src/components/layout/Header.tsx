@@ -36,16 +36,18 @@ export function Header({ userEmail }: HeaderProps) {
         </div>
         <div className="flex-1" />
         <DropdownMenu>
-          <DropdownMenuTrigger className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring">
-            <Avatar className="h-8 w-8">
-              <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+          <DropdownMenuTrigger className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+            <Avatar className="h-8 w-8 cursor-pointer hover:opacity-80 transition-opacity">
+              <AvatarFallback className="text-xs bg-rose-100 text-rose-700 font-semibold">{initials}</AvatarFallback>
             </Avatar>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <div className="px-2 py-1.5 text-xs text-muted-foreground">{userEmail}</div>
+          <DropdownMenuContent align="end" className="w-48">
+            <div className="px-2 py-2">
+              <p className="text-xs font-medium truncate">{userEmail}</p>
+            </div>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={signOut} className="text-destructive cursor-pointer">
-              <LogOut className="mr-2 h-4 w-4" />
+            <DropdownMenuItem onClick={signOut} className="text-destructive cursor-pointer gap-2">
+              <LogOut className="h-4 w-4" />
               Sign out
             </DropdownMenuItem>
           </DropdownMenuContent>

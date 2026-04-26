@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { appointmentSchema, AppointmentFormData } from '@/lib/validations/appointment'
@@ -8,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select'
 
 interface AppointmentFormProps {
   persons: Person[]
@@ -18,18 +19,33 @@ interface AppointmentFormProps {
 }
 
 export function AppointmentForm({ persons, onSubmit, defaultPersonId, isLoading }: AppointmentFormProps) {
+  const [selectedPersonId, setSelectedPersonId] = useState(defaultPersonId ?? '')
   const { register, handleSubmit, setValue, formState: { errors } } = useForm<AppointmentFormData>({
     resolver: zodResolver(appointmentSchema),
     defaultValues: { person_id: defaultPersonId ?? '' },
   })
 
+  const selectedPerson = persons.find(p => p.id === selectedPersonId)
+  const selectedLabel = selectedPerson
+    ? `${selectedPerson.first_name} ${selectedPerson.last_name}`
+    : null
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div className="space-y-1.5">
         <Label>Family Member</Label>
-        <Select onValueChange={(v: string | null) => setValue('person_id', v ?? '')} defaultValue={defaultPersonId ?? undefined}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select member" />
+        <Select
+          value={selectedPersonId || undefined}
+          onValueChange={(v: string | null) => {
+            const val = v ?? ''
+            setSelectedPersonId(val)
+            setValue('person_id', val)
+          }}
+        >
+          <SelectTrigger className="w-full">
+            <span className={selectedLabel ? 'text-sm' : 'text-sm text-muted-foreground'}>
+              {selectedLabel ?? 'Select member'}
+            </span>
           </SelectTrigger>
           <SelectContent>
             {persons.map((p) => (
