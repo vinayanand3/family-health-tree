@@ -5,6 +5,7 @@ import { buttonVariants } from '@/components/ui/button'
 import { Users, CalendarDays, Activity, AlertTriangle } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
+import { redirect } from 'next/navigation'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -17,17 +18,7 @@ export default async function DashboardPage() {
     .single()
 
   if (!familyMember) {
-    return (
-      <div className="max-w-lg mx-auto text-center py-20">
-        <h2 className="text-xl font-semibold mb-2">Welcome to FamilyHealth</h2>
-        <p className="text-muted-foreground mb-6">
-          You&apos;re not part of a family group yet. Create one to get started.
-        </p>
-        <Link href="/settings" className={buttonVariants({})}>
-          Create or join a family
-        </Link>
-      </div>
-    )
+    redirect('/settings')
   }
 
   const familyId = familyMember.family_id
