@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { Copy, Check } from 'lucide-react'
+import { Copy, Check, Mail } from 'lucide-react'
 
 export default function SettingsPage() {
   const supabase = createClient()
@@ -18,6 +18,7 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(false)
   const [copied, setCopied] = useState(false)
   const [message, setMessage] = useState('')
+  const [inviteEmail, setInviteEmail] = useState('')
 
   useEffect(() => {
     async function loadFamily() {
@@ -91,6 +92,20 @@ export default function SettingsPage() {
     setTimeout(() => setCopied(false), 2000)
   }
 
+  function sendEmailInvite() {
+    const code = family?.families?.invite_code ?? ''
+    const appUrl = 'https://family-health-tree.vercel.app'
+    const subject = encodeURIComponent(`Join my family on FamilyHealth`)
+    const body = encodeURIComponent(
+      `Hi,\n\nI'd like to invite you to join our family health tracker on FamilyHealth.\n\n` +
+      `1. Sign up or log in at: ${appUrl}/signup\n` +
+      `2. Go to Settings and enter this invite code: ${code}\n\n` +
+      `See you there!`
+    )
+    window.location.href = `mailto:${inviteEmail}?subject=${subject}&body=${body}`
+    setInviteEmail('')
+  }
+
   return (
     <div className="space-y-6 max-w-lg">
       <div>
@@ -116,6 +131,32 @@ export default function SettingsPage() {
                 <Input value={family.families.invite_code} readOnly className="font-mono" />
                 <Button variant="outline" size="icon" onClick={copyInviteCode}>
                   {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div>
+              <Label className="text-sm">Invite by Email</Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                Send an email with the invite code and a link to the app.
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  type="email"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  placeholder="family@example.com"
+                />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={sendEmailInvite}
+                  disabled={!inviteEmail.trim()}
+                  title="Send invite email"
+                >
+                  <Mail className="h-4 w-4" />
                 </Button>
               </div>
             </div>
