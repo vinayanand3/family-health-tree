@@ -1,0 +1,179 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import { Copy, Check } from 'lucide-react'
+
+export default function SettingsPage() {
+  const supabase = createClient()
+  const [family, setFamily] = useState<any>(null)
+  const [newFamilyName, setNewFamilyName] = useState('')
+  const [inviteCode, setInviteCode] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const [message, setMessage] = useState('')
+
+  useEffect(() => {
+    async function loadFamily() {
+      const { data: { user } } = await supabase.auth.getUser()
+      const { data: fm } = await supabase
+        .from('family_members')
+        .select('*, families(*)')
+        .eq('user_id', user!.id)
+        .single()
+
+      if (fm) setFamily(fm)
+    }
+    loadFamily()
+  }, [])
+
+  async function createFamily() {
+    if (!newFamilyName.trim()) return
+    setLoading(true)
+    const { data: { user } } = await supabase.auth.getUser()
+
+    const { data: fam, error } = await supabase
+      .from('families')
+      .insert({ name: newFamilyName.trim() })
+      .select()
+      .single()
+
+    if (!error && fam) {
+      await supabase.from('family_members').insert({
+        family_id: fam.id,
+        user_id: user!.id,
+        role: 'admin',
+      })
+      setFamily({ ...family, families: fam, role: 'admin', family_id: fam.id })
+      setNewFamilyName('')
+      setMessage('Family created!')
+    }
+    setLoading(false)
+  }
+
+  async function joinFamily() {
+    if (!inviteCode.trim()) return
+    setLoading(true)
+    const { data: { user } } = await supabase.auth.getUser()
+
+    const { data: fam } = await supabase
+      .from('families')
+      .select('*')
+      .eq('invite_code', inviteCode.trim().toLowerCase())
+      .single()
+
+    if (!fam) {
+      setMessage('Invalid invite code.')
+      setLoading(false)
+      return
+    }
+
+    await supabase.from('family_members').insert({
+      family_id: fam.id,
+      user_id: user!.id,
+      role: 'member',
+    })
+
+    setFamily({ ...family, families: fam, role: 'member', family_id: fam.id })
+    setInviteCode('')
+    setMessage('Joined family!')
+    setLoading(false)
+  }
+
+  function copyInviteCode() {
+    navigator.clipboard.writeText(family?.families?.invite_code ?? '')
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <div className="space-y-6 max-w-lg">
+      <div>
+        <h1 className="text-2xl font-bold">Settings</h1>
+        <p className="text-muted-foreground text-sm">Manage your family group</p>
+      </div>
+
+      {family?.families ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>{family.families.name}</CardTitle>
+            <CardDescription>
+              Your role: <Badge variant="secondary">{family.role}</Badge>
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label className="text-sm">Invite Code</Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                Share this code with family members so they can join.
+              </p>
+              <div className="flex gap-2">
+                <Input value={family.families.invite_code} readOnly className="font-mono" />
+                <Button variant="outline" size="icon" onClick={copyInviteCode}>
+                  {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Create a Family</CardTitle>
+              <CardDescription>Start a new family group and invite others.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="space-y-1.5">
+                <Label>Family Name</Label>
+                <Input
+                  value={newFamilyName}
+                  onChange={(e) => setNewFamilyName(e.target.value)}
+                  placeholder="The Smith Family"
+                />
+              </div>
+              <Button onClick={createFamily} disabled={loading || !newFamilyName.trim()}>
+                Create Family
+              </Button>
+            </CardContent>
+          </Card>
+
+          <div className="flex items-center gap-3">
+            <Separator className="flex-1" />
+            <span className="text-xs text-muted-foreground">or</span>
+            <Separator className="flex-1" />
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Join a Family</CardTitle>
+              <CardDescription>Enter an invite code from a family member.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="space-y-1.5">
+                <Label>Invite Code</Label>
+                <Input
+                  value={inviteCode}
+                  onChange={(e) => setInviteCode(e.target.value)}
+                  placeholder="abc12345"
+                  className="font-mono"
+                />
+              </div>
+              <Button onClick={joinFamily} variant="outline" disabled={loading || !inviteCode.trim()}>
+                Join Family
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {message && <p className="text-sm text-green-600">{message}</p>}
+    </div>
+  )
+}
