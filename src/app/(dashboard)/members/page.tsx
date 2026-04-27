@@ -4,6 +4,7 @@ import { MemberCard } from '@/components/members/MemberCard'
 import { buttonVariants } from '@/components/ui/button'
 import Link from 'next/link'
 import { UserPlus } from 'lucide-react'
+import { HealthCondition } from '@/types'
 
 export default async function MembersPage() {
   const supabase = await createClient()
@@ -27,7 +28,7 @@ export default async function MembersPage() {
     ? await supabase.from('health_conditions').select('*').in('person_id', persons.map(p => p.id))
     : { data: [] }
 
-  const conditionsByPerson = (conditions ?? []).reduce<Record<string, any[]>>((acc, c) => {
+  const conditionsByPerson = ((conditions ?? []) as HealthCondition[]).reduce<Record<string, HealthCondition[]>>((acc, c) => {
     if (!acc[c!.person_id]) acc[c!.person_id] = []
     acc[c!.person_id].push(c)
     return acc
@@ -59,7 +60,7 @@ export default async function MembersPage() {
             <MemberCard
               key={person.id}
               person={person}
-              conditions={conditionsByPerson[person.id] as any ?? []}
+              conditions={conditionsByPerson[person.id] ?? []}
             />
           ))}
         </div>

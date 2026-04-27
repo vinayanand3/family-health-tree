@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { AppointmentForm } from '@/components/appointments/AppointmentForm'
@@ -13,7 +13,7 @@ import { ArrowLeft } from 'lucide-react'
 
 export default function NewAppointmentPage() {
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const [persons, setPersons] = useState<Person[]>([])
   const [loading, setLoading] = useState(false)
   const [familyId, setFamilyId] = useState<string | null>(null)
@@ -38,7 +38,7 @@ export default function NewAppointmentPage() {
       }
     }
     loadPersons()
-  }, [])
+  }, [supabase])
 
   async function handleSubmit(data: AppointmentFormData) {
     if (!familyId) return

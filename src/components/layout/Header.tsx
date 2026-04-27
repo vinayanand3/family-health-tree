@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Heart, LogOut } from 'lucide-react'
+import { HeartPulse, LogOut } from 'lucide-react'
 
 interface HeaderProps {
   userEmail?: string
@@ -28,17 +28,17 @@ export function Header({ userEmail }: HeaderProps) {
   const initials = userEmail?.slice(0, 2).toUpperCase() ?? 'U'
 
   return (
-    <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
-      <div className="flex h-14 items-center px-4 gap-4">
+    <header className="sticky top-0 z-40 border-b border-border/70 bg-background/70 backdrop-blur-xl">
+      <div className="flex h-16 items-center px-5 gap-4">
         <div className="flex md:hidden items-center gap-2">
-          <Heart className="h-4 w-4 text-rose-500 fill-rose-500" />
-          <span className="font-semibold">FamilyHealth</span>
+          <HeartPulse className="h-4 w-4 text-primary" />
+          <span className="font-bold">FamilyHealth</span>
         </div>
         <div className="flex-1" />
         <DropdownMenu>
           <DropdownMenuTrigger className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
-            <Avatar className="h-8 w-8 cursor-pointer hover:opacity-80 transition-opacity">
-              <AvatarFallback className="text-xs bg-rose-100 text-rose-700 font-semibold">{initials}</AvatarFallback>
+            <Avatar className="h-9 w-9 cursor-pointer ring-2 ring-white shadow-sm transition-opacity hover:opacity-80">
+              <AvatarFallback className="text-xs bg-primary/10 text-primary font-black">{initials}</AvatarFallback>
             </Avatar>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">

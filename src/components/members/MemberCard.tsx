@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { formatDistanceToNow } from 'date-fns'
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, Activity, ChevronRight } from 'lucide-react'
 
 interface MemberCardProps {
   person: Person
@@ -18,15 +18,15 @@ export function MemberCard({ person, conditions = [] }: MemberCardProps) {
 
   return (
     <Link href={`/members/${person.id}`}>
-      <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
+      <Card className="h-full cursor-pointer bg-white/80 transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-slate-900/10">
         <CardHeader className="pb-2">
           <div className="flex items-center gap-3">
-            <Avatar>
-              <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+            <Avatar className="size-12 ring-4 ring-primary/10">
+              <AvatarFallback className="bg-primary/10 text-primary font-black">
                 {initials}
               </AvatarFallback>
             </Avatar>
-            <div>
+            <div className="min-w-0 flex-1">
               <p className="font-semibold leading-none">
                 {person.first_name} {person.last_name}
               </p>
@@ -36,11 +36,13 @@ export function MemberCard({ person, conditions = [] }: MemberCardProps) {
                 </p>
               )}
             </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
           </div>
         </CardHeader>
         <CardContent className="flex gap-2 flex-wrap">
           {activeCount > 0 && (
-            <Badge variant="secondary" className="text-xs">
+            <Badge variant="secondary" className="text-xs gap-1">
+              <Activity className="h-3 w-3" />
               {activeCount} condition{activeCount !== 1 ? 's' : ''}
             </Badge>
           )}

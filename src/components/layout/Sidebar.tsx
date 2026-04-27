@@ -2,14 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import {
-  LayoutDashboard,
-  TreePine,
-  Users,
-  CalendarDays,
-  Settings,
-  Heart,
-} from 'lucide-react'
+import { LayoutDashboard, TreePine, Users, CalendarDays, Settings, HeartPulse } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
@@ -24,21 +17,26 @@ export function Sidebar() {
   const pathname = usePathname()
 
   return (
-    <aside className="hidden md:flex flex-col w-60 border-r bg-background min-h-screen">
-      <div className="flex items-center gap-2 px-6 py-5 border-b">
-        <Heart className="h-5 w-5 text-rose-500 fill-rose-500" />
-        <span className="font-semibold text-lg">FamilyHealth</span>
+    <aside className="hidden md:flex flex-col w-64 border-r border-border/70 bg-white/65 min-h-screen backdrop-blur-xl">
+      <div className="flex items-center gap-3 px-6 py-6 border-b border-border/70">
+        <div className="grid size-10 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm shadow-primary/25">
+          <HeartPulse className="h-5 w-5" />
+        </div>
+        <div>
+          <span className="font-black text-lg leading-none">FamilyHealth</span>
+          <p className="text-xs text-muted-foreground mt-1">Shared care tree</p>
+        </div>
       </div>
-      <nav className="flex-1 px-3 py-4 space-y-1">
+      <nav className="flex-1 px-3 py-5 space-y-1.5">
         {navItems.map(({ href, label, icon: Icon }) => (
           <Link
             key={href}
             href={href}
             className={cn(
-              'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors',
+              'flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-bold transition-all',
               pathname === href
-                ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
+                : 'text-muted-foreground hover:bg-white hover:text-foreground hover:shadow-sm'
             )}
           >
             <Icon className="h-4 w-4" />

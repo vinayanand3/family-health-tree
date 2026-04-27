@@ -1,6 +1,5 @@
 import { HealthCondition, Medication, Allergy } from '@/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Pill, AlertTriangle, Activity } from 'lucide-react'
 
 interface HealthSummaryProps {

@@ -107,4 +107,10 @@ export interface TreeNode {
   attributes?: Record<string, string>
   children?: TreeNode[]
   personId?: string
+  initials?: string
+  age?: string
+  activeConditions?: number
+  hereditaryConditions?: number
+  medicationCount?: number
+  allergyCount?: number
 }

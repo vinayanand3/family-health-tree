@@ -2,10 +2,10 @@ import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { AppointmentList } from '@/components/appointments/AppointmentList'
 import { buttonVariants } from '@/components/ui/button'
-import { Users, CalendarDays, Activity, AlertTriangle } from 'lucide-react'
+import { Users, CalendarDays, Activity, AlertTriangle, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
-import { cn } from '@/lib/utils'
 import { redirect } from 'next/navigation'
+import { Appointment } from '@/types'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -43,55 +43,64 @@ export default async function DashboardPage() {
     : { data: [] }
 
   const memberCount = personsResult.data?.length ?? 0
-  const upcomingAppointments = appointmentsResult.data ?? []
+  const upcomingAppointments = (appointmentsResult.data ?? []) as Appointment[]
   const hereditaryCount = conditionsResult.data?.filter(c => c.is_hereditary).length ?? 0
   const conditionCount = conditionsResult.data?.length ?? 0
 
-  const familyName = (familyMember.families as any)?.name ?? 'Your Family'
+  const familyRelation = familyMember.families as { name?: string } | { name?: string }[] | null
+  const familyName = (Array.isArray(familyRelation) ? familyRelation[0]?.name : familyRelation?.name) ?? 'Your Family'
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">{familyName}</h1>
-        <p className="text-muted-foreground">Family health overview</p>
+    <div className="space-y-7">
+      <div className="rounded-3xl border border-border/70 bg-white/70 p-6 shadow-sm backdrop-blur">
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="text-sm font-bold text-primary">Family workspace</p>
+            <h1 className="mt-2 text-3xl font-black">{familyName}</h1>
+            <p className="text-muted-foreground">A shared command center for the people you care for.</p>
+          </div>
+          <Link href="/tree" className={buttonVariants({ variant: 'outline' })}>
+            Open tree
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
+        <Card className="bg-white/80">
           <CardHeader className="pb-2">
-            <CardTitle className="text-xs text-muted-foreground font-medium flex items-center gap-1.5">
-              <Users className="h-3.5 w-3.5" /> Members
+            <CardTitle className="text-xs text-muted-foreground font-bold flex items-center gap-1.5">
+              <Users className="h-3.5 w-3.5 text-primary" /> Members
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">{memberCount}</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="bg-white/80">
           <CardHeader className="pb-2">
-            <CardTitle className="text-xs text-muted-foreground font-medium flex items-center gap-1.5">
-              <CalendarDays className="h-3.5 w-3.5" /> Upcoming
+            <CardTitle className="text-xs text-muted-foreground font-bold flex items-center gap-1.5">
+              <CalendarDays className="h-3.5 w-3.5 text-secondary-foreground" /> Upcoming
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">{upcomingAppointments.length}</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="bg-white/80">
           <CardHeader className="pb-2">
-            <CardTitle className="text-xs text-muted-foreground font-medium flex items-center gap-1.5">
-              <Activity className="h-3.5 w-3.5" /> Conditions
+            <CardTitle className="text-xs text-muted-foreground font-bold flex items-center gap-1.5">
+              <Activity className="h-3.5 w-3.5 text-primary" /> Conditions
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">{conditionCount}</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="bg-white/80">
           <CardHeader className="pb-2">
-            <CardTitle className="text-xs text-muted-foreground font-medium flex items-center gap-1.5">
-              <AlertTriangle className="h-3.5 w-3.5" /> Hereditary
+            <CardTitle className="text-xs text-muted-foreground font-bold flex items-center gap-1.5">
+              <AlertTriangle className="h-3.5 w-3.5 text-amber-600" /> Hereditary
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -108,7 +117,7 @@ export default async function DashboardPage() {
             View all
           </Link>
         </div>
-        <AppointmentList appointments={upcomingAppointments as any} showPerson />
+        <AppointmentList appointments={upcomingAppointments} showPerson />
       </div>
     </div>
   )

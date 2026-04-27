@@ -28,7 +28,7 @@ This creates all tables and Row-Level Security policies.
 1. Go to **Authentication → Settings**
 2. Under **Site URL**, set it to `http://localhost:3000` (for development)
 3. Under **Redirect URLs**, add: `http://localhost:3000/auth/callback`
-4. Email confirmation is on by default — you can turn it off for development
+4. Email confirmation is on by default. You can turn it off for development.
 
 ## 5. Create a Storage bucket (for documents)
 

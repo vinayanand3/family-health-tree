@@ -5,6 +5,7 @@ import { buttonVariants } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import Link from 'next/link'
 import { Plus } from 'lucide-react'
+import { Appointment } from '@/types'
 
 export default async function AppointmentsPage() {
   const supabase = await createClient()
@@ -25,10 +26,10 @@ export default async function AppointmentsPage() {
     .order('appointment_date', { ascending: false })
 
   const now = new Date().toISOString()
-  const upcoming = (allAppointments ?? [])
+  const upcoming = ((allAppointments ?? []) as Appointment[])
     .filter((a) => a.appointment_date >= now && !a.is_completed)
     .reverse()
-  const past = (allAppointments ?? []).filter(
+  const past = ((allAppointments ?? []) as Appointment[]).filter(
     (a) => a.appointment_date < now || a.is_completed
   )
 
@@ -50,10 +51,10 @@ export default async function AppointmentsPage() {
           <TabsTrigger value="past">Past ({past.length})</TabsTrigger>
         </TabsList>
         <TabsContent value="upcoming" className="mt-4">
-          <AppointmentList appointments={upcoming as any} showPerson />
+          <AppointmentList appointments={upcoming} showPerson />
         </TabsContent>
         <TabsContent value="past" className="mt-4">
-          <AppointmentList appointments={past as any} showPerson />
+          <AppointmentList appointments={past} showPerson />
         </TabsContent>
       </Tabs>
     </div>

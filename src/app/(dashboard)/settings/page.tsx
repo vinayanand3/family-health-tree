@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,10 +9,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Copy, Check, Mail } from 'lucide-react'
+import { Family, UserRole } from '@/types'
+
+interface FamilyState {
+  family_id: string
+  role: UserRole
+  families: Family
+}
 
 export default function SettingsPage() {
-  const supabase = createClient()
-  const [family, setFamily] = useState<any>(null)
+  const supabase = useMemo(() => createClient(), [])
+  const [family, setFamily] = useState<FamilyState | null>(null)
   const [newFamilyName, setNewFamilyName] = useState('')
   const [inviteCode, setInviteCode] = useState('')
   const [loading, setLoading] = useState(false)
@@ -32,13 +39,11 @@ export default function SettingsPage() {
       if (fm) setFamily(fm)
     }
     loadFamily()
-  }, [])
+  }, [supabase])
 
   async function createFamily() {
     if (!newFamilyName.trim()) return
     setLoading(true)
-    const { data: { user } } = await supabase.auth.getUser()
-
     const { data: newFamilyId, error } = await supabase
       .rpc('create_family', { family_name: newFamilyName.trim() })
 

@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { format } from 'date-fns'
 import Link from 'next/link'
 import { ArrowLeft, Pencil } from 'lucide-react'
+import { Allergy, Appointment, HealthCondition, Medication } from '@/types'
 
 export default async function MemberDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -25,10 +26,10 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
   if (!personResult.data) notFound()
 
   const person = personResult.data
-  const conditions = conditionsResult.data ?? []
-  const medications = medsResult.data ?? []
-  const allergies = allergiesResult.data ?? []
-  const appointments = appointmentsResult.data ?? []
+  const conditions = (conditionsResult.data ?? []) as HealthCondition[]
+  const medications = (medsResult.data ?? []) as Medication[]
+  const allergies = (allergiesResult.data ?? []) as Allergy[]
+  const appointments = (appointmentsResult.data ?? []) as Appointment[]
 
   const initials = `${person.first_name[0]}${person.last_name?.[0] ?? ''}`.toUpperCase()
 
@@ -69,9 +70,9 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
 
         <TabsContent value="health" className="mt-4">
           <HealthSummary
-            conditions={conditions as any}
-            medications={medications as any}
-            allergies={allergies as any}
+            conditions={conditions}
+            medications={medications}
+            allergies={allergies}
           />
           {person.notes && (
             <div className="mt-4 p-4 bg-muted/30 rounded-lg">
@@ -88,7 +89,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
               Add Appointment
             </Link>
           </div>
-          <AppointmentList appointments={appointments as any} />
+          <AppointmentList appointments={appointments} />
         </TabsContent>
       </Tabs>
     </div>
