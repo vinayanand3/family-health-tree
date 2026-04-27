@@ -67,46 +67,66 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="bg-white/80">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs text-muted-foreground font-bold flex items-center gap-1.5">
-              <Users className="h-3.5 w-3.5 text-primary" /> Members
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{memberCount}</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-white/80">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs text-muted-foreground font-bold flex items-center gap-1.5">
-              <CalendarDays className="h-3.5 w-3.5 text-secondary-foreground" /> Upcoming
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{upcomingAppointments.length}</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-white/80">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs text-muted-foreground font-bold flex items-center gap-1.5">
-              <Activity className="h-3.5 w-3.5 text-primary" /> Conditions
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{conditionCount}</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-white/80">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs text-muted-foreground font-bold flex items-center gap-1.5">
-              <AlertTriangle className="h-3.5 w-3.5 text-amber-600" /> Hereditary
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{hereditaryCount}</p>
-          </CardContent>
-        </Card>
+        <Link href="/members" aria-label="View all family members">
+          <Card className="group h-full cursor-pointer bg-white/80 transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-slate-900/10">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs text-muted-foreground font-bold flex items-center justify-between gap-1.5">
+                <span className="flex items-center gap-1.5">
+                  <Users className="h-3.5 w-3.5 text-primary" /> Members
+                </span>
+                <ArrowRight className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100" />
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold">{memberCount}</p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/appointments" aria-label="View upcoming appointments">
+          <Card className="group h-full cursor-pointer bg-white/80 transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-slate-900/10">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs text-muted-foreground font-bold flex items-center justify-between gap-1.5">
+                <span className="flex items-center gap-1.5">
+                  <CalendarDays className="h-3.5 w-3.5 text-secondary-foreground" /> Upcoming
+                </span>
+                <ArrowRight className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100" />
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold">{upcomingAppointments.length}</p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/members?health=conditions" aria-label="View members with health conditions">
+          <Card className="group h-full cursor-pointer bg-white/80 transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-slate-900/10">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs text-muted-foreground font-bold flex items-center justify-between gap-1.5">
+                <span className="flex items-center gap-1.5">
+                  <Activity className="h-3.5 w-3.5 text-primary" /> Conditions
+                </span>
+                <ArrowRight className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100" />
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold">{conditionCount}</p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/members?health=hereditary" aria-label="View members with hereditary markers">
+          <Card className="group h-full cursor-pointer bg-white/80 transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-slate-900/10">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs text-muted-foreground font-bold flex items-center justify-between gap-1.5">
+                <span className="flex items-center gap-1.5">
+                  <AlertTriangle className="h-3.5 w-3.5 text-amber-600" /> Hereditary
+                </span>
+                <ArrowRight className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100" />
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold">{hereditaryCount}</p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       {/* Upcoming appointments */}

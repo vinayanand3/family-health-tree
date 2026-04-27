@@ -1,11 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { personSchema, PersonFormData } from '@/lib/validations/member'
 import { createClient } from '@/lib/supabase/client'
+import { buildRelationshipInserts, fullName, RelativeRole } from '@/lib/relationships'
+import { Person } from '@/types'
 import { Button } from '@/components/ui/button'
 import { buttonVariants } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,26 +20,49 @@ import Link from 'next/link'
 
 export default function NewMemberPage() {
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [familyId, setFamilyId] = useState('')
+  const [persons, setPersons] = useState<Person[]>([])
+  const [relatedPersonId, setRelatedPersonId] = useState('')
+  const [relationshipRole, setRelationshipRole] = useState<RelativeRole>('child')
 
   const { register, handleSubmit, setValue, formState: { errors } } = useForm<PersonFormData>({
     resolver: zodResolver(personSchema),
   })
 
+  useEffect(() => {
+    async function loadFamilyMembers() {
+      const { data: { user } } = await supabase.auth.getUser()
+      const { data: familyMember } = await supabase
+        .from('family_members')
+        .select('family_id')
+        .eq('user_id', user!.id)
+        .single()
+
+      if (!familyMember) return
+
+      setFamilyId(familyMember.family_id)
+      const { data: existingPersons } = await supabase
+        .from('persons')
+        .select('*')
+        .eq('family_id', familyMember.family_id)
+        .order('first_name')
+
+      setPersons((existingPersons ?? []) as Person[])
+    }
+
+    loadFamilyMembers()
+  }, [supabase])
+
   async function onSubmit(data: PersonFormData) {
     setLoading(true)
     setError('')
 
-    const { data: { user } } = await supabase.auth.getUser()
-    const { data: familyMember } = await supabase
-      .from('family_members')
-      .select('family_id')
-      .eq('user_id', user!.id)
-      .single()
+    const activeFamilyId = familyId
 
-    if (!familyMember) {
+    if (!activeFamilyId) {
       setError('You must be part of a family first.')
       setLoading(false)
       return
@@ -45,7 +70,7 @@ export default function NewMemberPage() {
 
     const { data: person, error: insertError } = await supabase
       .from('persons')
-      .insert({ ...data, family_id: familyMember.family_id })
+      .insert({ ...data, family_id: activeFamilyId })
       .select()
       .single()
 
@@ -53,6 +78,28 @@ export default function NewMemberPage() {
       setError(insertError.message)
       setLoading(false)
     } else {
+      if (relatedPersonId) {
+        const relationships = buildRelationshipInserts({
+          familyId: activeFamilyId,
+          personId: person.id,
+          relatedPersonId,
+          role: relationshipRole,
+        })
+
+        const { error: relationshipError } = await supabase
+          .from('relationships')
+          .upsert(relationships, {
+            onConflict: 'person_id,related_person_id,relationship_type',
+            ignoreDuplicates: true,
+          })
+
+        if (relationshipError) {
+          setError(`Member saved, but relationship failed: ${relationshipError.message}`)
+          setLoading(false)
+          return
+        }
+      }
+
       router.push(`/members/${person.id}`)
     }
   }
@@ -108,6 +155,60 @@ export default function NewMemberPage() {
               <Label>Notes</Label>
               <Textarea {...register('notes')} placeholder="Any additional notes..." rows={3} />
             </div>
+
+            {persons.length > 0 && (
+              <div className="space-y-3 rounded-xl border bg-muted/20 p-3">
+                <div>
+                  <p className="text-sm font-bold">Relationship</p>
+                  <p className="text-xs text-muted-foreground">
+                    Optional, but this is what makes the tree connect people.
+                  </p>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label>This member is</Label>
+                    <Select
+                      value={relationshipRole}
+                      onValueChange={(value: RelativeRole | null) => value && setRelationshipRole(value)}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select relationship" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="child">Child of</SelectItem>
+                        <SelectItem value="parent">Parent of</SelectItem>
+                        <SelectItem value="spouse">Spouse of</SelectItem>
+                        <SelectItem value="sibling">Sibling of</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label>Existing member</Label>
+                    <Select
+                      value={relatedPersonId || undefined}
+                      onValueChange={(value: string | null) => setRelatedPersonId(value ?? '')}
+                    >
+                      <SelectTrigger className="w-full">
+                        <span className={relatedPersonId ? 'text-sm' : 'text-sm text-muted-foreground'}>
+                          {relatedPersonId
+                            ? fullName(persons.find((person) => person.id === relatedPersonId)!)
+                            : 'Select member'}
+                        </span>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {persons.map((person) => (
+                          <SelectItem key={person.id} value={person.id}>
+                            {fullName(person)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {error && <p className="text-sm text-destructive">{error}</p>}
 

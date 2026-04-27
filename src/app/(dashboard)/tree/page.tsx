@@ -39,11 +39,15 @@ function buildTree(persons: Person[], relationships: Relationship[], healthCount
   }
 
   const personMap = Object.fromEntries(persons.map((p) => [p.id, p]))
+  const renderedPeople = new Set<string>()
 
   function buildNode(personId: string): TreeNode {
+    renderedPeople.add(personId)
     const p = personMap[personId]
     const name = `${p.first_name}${p.last_name ? ' ' + p.last_name : ''}`
-    const children = (childMap[personId] ?? []).map(buildNode)
+    const children = (childMap[personId] ?? [])
+      .filter((childId) => !renderedPeople.has(childId))
+      .map(buildNode)
     const counts = healthCounts[personId] ?? {
       activeConditions: 0,
       hereditaryConditions: 0,
