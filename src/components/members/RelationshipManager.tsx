@@ -149,12 +149,12 @@ export function RelationshipManager({ person, persons, relationships }: Relation
       <Separator />
 
       <div className="space-y-3 rounded-xl border bg-white/70 p-3">
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid gap-3">
           <div className="space-y-1.5">
             <Label>Relationship</Label>
             <Select value={role} onValueChange={(value: RelativeRole | null) => value && setRole(value)}>
-              <SelectTrigger className="w-full">
-                <span className="text-sm">{roleLabels[role]}</span>
+              <SelectTrigger className="w-full min-w-0">
+                <span className="block min-w-0 truncate text-sm">{roleLabels[role]}</span>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="child">Child of selected member</SelectItem>
@@ -168,8 +168,8 @@ export function RelationshipManager({ person, persons, relationships }: Relation
           <div className="space-y-1.5">
             <Label>Member</Label>
             <Select value={relatedPersonId || undefined} onValueChange={(value: string | null) => setRelatedPersonId(value ?? '')}>
-              <SelectTrigger className="w-full">
-                <span className={relatedPersonId ? 'text-sm' : 'text-sm text-muted-foreground'}>
+              <SelectTrigger className="w-full min-w-0">
+                <span className={relatedPersonId ? 'block min-w-0 truncate text-sm' : 'block min-w-0 truncate text-sm text-muted-foreground'}>
                   {relatedPersonId ? fullName(peopleById[relatedPersonId]) : 'Select member'}
                 </span>
               </SelectTrigger>
