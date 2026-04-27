@@ -33,7 +33,7 @@ export default async function EditMemberPage({ params }: { params: Promise<{ id:
   const relationships = (relationshipsResult.data ?? []) as Relationship[]
 
   return (
-    <div className="max-w-3xl">
+    <div className="max-w-6xl">
       <div className="mb-6">
         <Link href={`/members/${id}`} className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
           <ArrowLeft className="h-4 w-4 mr-1" /> Back
@@ -41,27 +41,29 @@ export default async function EditMemberPage({ params }: { params: Promise<{ id:
         <h1 className="text-2xl font-bold mt-2">Edit Member</h1>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Personal Information</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <EditMemberForm person={person} />
-        </CardContent>
-      </Card>
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Personal Information</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <EditMemberForm person={person} />
+          </CardContent>
+        </Card>
 
-      <Card className="mt-5">
-        <CardHeader>
-          <CardTitle className="text-base">Relationships</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <RelationshipManager
-            person={person as Person}
-            persons={persons}
-            relationships={relationships}
-          />
-        </CardContent>
-      </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Relationships</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <RelationshipManager
+              person={person as Person}
+              persons={persons}
+              relationships={relationships}
+            />
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

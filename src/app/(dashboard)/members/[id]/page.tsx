@@ -5,11 +5,13 @@ import { AppointmentList } from '@/components/appointments/AppointmentList'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { format } from 'date-fns'
 import Link from 'next/link'
-import { ArrowLeft, Pencil } from 'lucide-react'
-import { Allergy, Appointment, HealthCondition, Medication } from '@/types'
+import { ArrowLeft, GitFork, Pencil } from 'lucide-react'
+import { Allergy, Appointment, HealthCondition, Medication, Person, Relationship } from '@/types'
+import { describeRelationship } from '@/lib/relationships'
 
 export default async function MemberDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -25,11 +27,22 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
 
   if (!personResult.data) notFound()
 
-  const person = personResult.data
+  const person = personResult.data as Person
+  const [personsResult, relationshipsResult] = await Promise.all([
+    supabase.from('persons').select('*').eq('family_id', person.family_id),
+    supabase
+      .from('relationships')
+      .select('*')
+      .eq('family_id', person.family_id)
+      .or(`person_id.eq.${id},related_person_id.eq.${id}`),
+  ])
   const conditions = (conditionsResult.data ?? []) as HealthCondition[]
   const medications = (medsResult.data ?? []) as Medication[]
   const allergies = (allergiesResult.data ?? []) as Allergy[]
   const appointments = (appointmentsResult.data ?? []) as Appointment[]
+  const persons = (personsResult.data ?? []) as Person[]
+  const relationships = (relationshipsResult.data ?? []) as Relationship[]
+  const peopleById = Object.fromEntries(persons.map((member) => [member.id, member]))
 
   const initials = `${person.first_name[0]}${person.last_name?.[0] ?? ''}`.toUpperCase()
 
@@ -61,6 +74,35 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
           </div>
         </div>
       </div>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <GitFork className="h-4 w-4 text-primary" />
+            Relationships
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {relationships.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {relationships.map((relationship) => (
+                <Badge key={relationship.id} variant="secondary">
+                  {describeRelationship({ relationship, currentPersonId: id, peopleById })}
+                </Badge>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3 rounded-xl border border-dashed bg-muted/30 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-muted-foreground">
+                No relationships have been added for this member yet.
+              </p>
+              <Link href={`/members/${id}/edit`} className={buttonVariants({ size: 'sm' })}>
+                Add relationship
+              </Link>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Tabs defaultValue="health">
         <TabsList>
