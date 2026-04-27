@@ -151,4 +151,12 @@
     background: color-mix(in oklch, var(--card), transparent 10%);
     box-shadow: 0 20px 80px rgb(31 41 55 / 8%);
   }
+
+  .family-tree-link {
+    fill: none;
+    stroke: color-mix(in oklch, var(--primary), transparent 38%);
+    stroke-width: 3px;
+    stroke-linecap: round;
+    filter: drop-shadow(0 6px 8px rgb(31 41 55 / 12%));
+  }
 }
