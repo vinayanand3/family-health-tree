@@ -1,8 +1,8 @@
 import { Appointment } from '@/types'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { format, isPast } from 'date-fns'
-import { CalendarDays, MapPin, User } from 'lucide-react'
+import { differenceInCalendarDays, format, isPast } from 'date-fns'
+import { BellRing, CalendarDays, MapPin, User } from 'lucide-react'
 
 interface AppointmentListProps {
   appointments: Appointment[]
@@ -22,9 +22,11 @@ export function AppointmentList({ appointments, showPerson = false }: Appointmen
     <div className="space-y-3">
       {appointments.map((appt) => {
         const isOverdue = isPast(new Date(appt.appointment_date)) && !appt.is_completed
+        const daysUntil = differenceInCalendarDays(new Date(appt.appointment_date), new Date())
+        const needsAttention = !appt.is_completed && !isOverdue && daysUntil <= 7
 
         return (
-          <Card key={appt.id} className={isOverdue ? 'border-rose-200' : ''}>
+          <Card key={appt.id} className={needsAttention ? 'border-primary/30 bg-primary/5' : isOverdue ? 'border-rose-200' : ''}>
             <CardContent className="py-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="space-y-1.5 flex-1">
@@ -38,6 +40,12 @@ export function AppointmentList({ appointments, showPerson = false }: Appointmen
                     {isOverdue && (
                       <Badge variant="destructive" className="text-xs">
                         Overdue
+                      </Badge>
+                    )}
+                    {needsAttention && (
+                      <Badge variant="secondary" className="gap-1 bg-primary/10 text-primary">
+                        <BellRing className="h-3 w-3" />
+                        {daysUntil === 0 ? 'Today' : `${daysUntil} day${daysUntil === 1 ? '' : 's'}`}
                       </Badge>
                     )}
                   </div>

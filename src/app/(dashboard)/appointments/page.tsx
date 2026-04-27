@@ -4,8 +4,9 @@ import { AppointmentList } from '@/components/appointments/AppointmentList'
 import { buttonVariants } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import Link from 'next/link'
-import { Plus } from 'lucide-react'
+import { BellRing, CalendarDays, MapPin, Plus, UserRound } from 'lucide-react'
 import { Appointment } from '@/types'
+import { differenceInCalendarDays, format, formatDistanceToNow } from 'date-fns'
 
 export default async function AppointmentsPage() {
   const supabase = await createClient()
@@ -29,6 +30,7 @@ export default async function AppointmentsPage() {
   const upcoming = ((allAppointments ?? []) as Appointment[])
     .filter((a) => a.appointment_date >= now && !a.is_completed)
     .reverse()
+  const nextAppointment = upcoming[0]
   const past = ((allAppointments ?? []) as Appointment[]).filter(
     (a) => a.appointment_date < now || a.is_completed
   )
@@ -44,6 +46,48 @@ export default async function AppointmentsPage() {
           <Plus className="h-4 w-4 mr-2" /> Add Appointment
         </Link>
       </div>
+
+      {nextAppointment && (
+        <div className="rounded-3xl border border-primary/25 bg-primary/10 p-5 shadow-sm">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex gap-4">
+              <div className="grid size-12 shrink-0 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-sm shadow-primary/25">
+                <BellRing className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-bold">Next appointment</p>
+                  <span className="rounded-full bg-white/75 px-2.5 py-1 text-xs font-bold text-primary">
+                    {differenceInCalendarDays(new Date(nextAppointment.appointment_date), new Date()) === 0
+                      ? 'Today'
+                      : formatDistanceToNow(new Date(nextAppointment.appointment_date), { addSuffix: true })}
+                  </span>
+                </div>
+                <p className="mt-1 text-sm font-medium">{nextAppointment.title}</p>
+                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <CalendarDays className="h-3.5 w-3.5" />
+                    {format(new Date(nextAppointment.appointment_date), 'PPp')}
+                  </span>
+                  {nextAppointment.doctor_name && (
+                    <span className="flex items-center gap-1">
+                      <UserRound className="h-3.5 w-3.5" />
+                      {nextAppointment.doctor_name}
+                    </span>
+                  )}
+                  {nextAppointment.location && (
+                    <span className="flex items-center gap-1">
+                      <MapPin className="h-3.5 w-3.5" />
+                      {nextAppointment.location}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+            <p className="text-sm font-medium text-primary">Free in-app reminder</p>
+          </div>
+        </div>
+      )}
 
       <Tabs defaultValue="upcoming">
         <TabsList>

@@ -13,6 +13,27 @@ import { ArrowLeft, GitFork, Pencil } from 'lucide-react'
 import { Allergy, Appointment, HealthCondition, Medication, Person, Relationship } from '@/types'
 import { describeRelationship } from '@/lib/relationships'
 
+function uniqueVisibleRelationships(relationships: Relationship[]) {
+  const seen = new Set<string>()
+
+  return relationships.filter((relationship) => {
+    const isReciprocal = relationship.relationship_type === 'spouse' || relationship.relationship_type === 'sibling'
+
+    if (!isReciprocal) {
+      return true
+    }
+
+    const ids = [relationship.person_id, relationship.related_person_id].sort()
+    const key = `${relationship.relationship_type}:${ids.join(':')}`
+    if (seen.has(key)) {
+      return false
+    }
+
+    seen.add(key)
+    return true
+  })
+}
+
 export default async function MemberDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
@@ -42,6 +63,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
   const appointments = (appointmentsResult.data ?? []) as Appointment[]
   const persons = (personsResult.data ?? []) as Person[]
   const relationships = (relationshipsResult.data ?? []) as Relationship[]
+  const visibleRelationships = uniqueVisibleRelationships(relationships)
   const peopleById = Object.fromEntries(persons.map((member) => [member.id, member]))
 
   const initials = `${person.first_name[0]}${person.last_name?.[0] ?? ''}`.toUpperCase()
@@ -83,9 +105,9 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {relationships.length > 0 ? (
+          {visibleRelationships.length > 0 ? (
             <div className="flex flex-wrap gap-2">
-              {relationships.map((relationship) => (
+              {visibleRelationships.map((relationship) => (
                 <Badge key={relationship.id} variant="secondary">
                   {describeRelationship({ relationship, currentPersonId: id, peopleById })}
                 </Badge>

@@ -2,10 +2,11 @@ import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { AppointmentList } from '@/components/appointments/AppointmentList'
 import { buttonVariants } from '@/components/ui/button'
-import { Users, CalendarDays, Activity, AlertTriangle, ArrowRight } from 'lucide-react'
+import { Users, CalendarDays, Activity, AlertTriangle, ArrowRight, BellRing, MapPin, UserRound } from 'lucide-react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { Appointment } from '@/types'
+import { differenceInCalendarDays, format, formatDistanceToNow } from 'date-fns'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -44,6 +45,7 @@ export default async function DashboardPage() {
 
   const memberCount = personsResult.data?.length ?? 0
   const upcomingAppointments = (appointmentsResult.data ?? []) as Appointment[]
+  const nextAppointment = upcomingAppointments[0]
   const hereditaryCount = conditionsResult.data?.filter(c => c.is_hereditary).length ?? 0
   const conditionCount = conditionsResult.data?.length ?? 0
 
@@ -128,6 +130,53 @@ export default async function DashboardPage() {
           </Card>
         </Link>
       </div>
+
+      {nextAppointment && (
+        <Link href="/appointments" className="block">
+          <div className="rounded-3xl border border-primary/25 bg-primary/10 p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/10">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div className="flex gap-4">
+                <div className="grid size-12 shrink-0 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-sm shadow-primary/25">
+                  <BellRing className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-bold">Upcoming appointment alert</p>
+                    <span className="rounded-full bg-white/75 px-2.5 py-1 text-xs font-bold text-primary">
+                      {differenceInCalendarDays(new Date(nextAppointment.appointment_date), new Date()) === 0
+                        ? 'Today'
+                        : formatDistanceToNow(new Date(nextAppointment.appointment_date), { addSuffix: true })}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-sm font-medium">{nextAppointment.title}</p>
+                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <CalendarDays className="h-3.5 w-3.5" />
+                      {format(new Date(nextAppointment.appointment_date), 'PPp')}
+                    </span>
+                    {nextAppointment.doctor_name && (
+                      <span className="flex items-center gap-1">
+                        <UserRound className="h-3.5 w-3.5" />
+                        {nextAppointment.doctor_name}
+                      </span>
+                    )}
+                    {nextAppointment.location && (
+                      <span className="flex items-center gap-1">
+                        <MapPin className="h-3.5 w-3.5" />
+                        {nextAppointment.location}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="inline-flex items-center gap-2 text-sm font-bold text-primary">
+                Review appointment
+                <ArrowRight className="h-4 w-4" />
+              </div>
+            </div>
+          </div>
+        </Link>
+      )}
 
       {/* Upcoming appointments */}
       <div>
