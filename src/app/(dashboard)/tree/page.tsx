@@ -102,13 +102,14 @@ export default async function TreePage() {
       healthCounts[allergy.person_id].allergyCount += 1
   }
 
-  // Build flat person nodes for the genogram renderer
+  // Build flat person nodes for the tree renderer
   const personNodes: PersonNodeData[] = persons.map((p) => ({
     personId: p.id,
     name: `${p.first_name}${p.last_name ? ' ' + p.last_name : ''}`,
     initials: `${p.first_name[0]}${p.last_name?.[0] ?? ''}`.toUpperCase(),
     age: getAgeLabel(p.date_of_birth),
     gender: p.gender,
+    photoUrl: p.photo_url,
     ...(healthCounts[p.id] ?? {
       activeConditions: 0,
       hereditaryConditions: 0,

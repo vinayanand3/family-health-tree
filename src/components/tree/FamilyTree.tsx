@@ -17,7 +17,7 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { useRouter } from 'next/navigation'
-import { Activity, Heart, AlertCircle, Pill, GitFork } from 'lucide-react'
+import { GitFork } from 'lucide-react'
 import { Relationship } from '@/types'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -28,6 +28,7 @@ export type PersonNodeData = {
   initials: string
   age: string
   gender: string | null
+  photoUrl: string | null
   activeConditions: number
   hereditaryConditions: number
   medicationCount: number
@@ -46,7 +47,7 @@ function healthStatus(d: PersonNodeData): 'hereditary' | 'active' | 'managed' | 
   return 'healthy'
 }
 
-const STATUS_BORDER: Record<string, string> = {
+const STATUS_RING: Record<string, string> = {
   hereditary: '#f43f5e',
   active: '#f59e0b',
   managed: '#3b82f6',
@@ -60,146 +61,264 @@ const STATUS_AVATAR: Record<string, { bg: string; fg: string }> = {
   healthy: { bg: '#f0fdf4', fg: '#065f46' },
 }
 
-// ─── Person Node Component ────────────────────────────────────────────────────
+const HEALTH_ITEMS = [
+  { key: 'activeConditions' as const, color: '#f59e0b', singular: 'active condition' },
+  { key: 'hereditaryConditions' as const, color: '#f43f5e', singular: 'hereditary risk' },
+  { key: 'medicationCount' as const, color: '#3b82f6', singular: 'medication' },
+  { key: 'allergyCount' as const, color: '#a855f7', singular: 'allergy' },
+]
+
+// ─── Person Node ──────────────────────────────────────────────────────────────
 
 function PersonNode({ data }: NodeProps<PersonFlowNode>) {
   const [hovered, setHovered] = useState(false)
   const router = useRouter()
   const status = healthStatus(data)
-  const borderColor = STATUS_BORDER[status]
+  const ringColor = STATUS_RING[status]
   const { bg, fg } = STATUS_AVATAR[status]
   const hasHealth =
     data.activeConditions > 0 ||
     data.hereditaryConditions > 0 ||
     data.medicationCount > 0 ||
     data.allergyCount > 0
-  const genderSymbol =
-    data.gender === 'male' ? '♂' : data.gender === 'female' ? '♀' : null
+
+  const NODE_W = 152
+  const openProfile = () => router.push(`/members/${data.personId}`)
 
   return (
-    <div className="relative">
-      {/* Target handles */}
+    <div
+      role="button"
+      tabIndex={0}
+      aria-label={`Open ${data.name}'s health profile`}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onClick={openProfile}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          openProfile()
+        }
+      }}
+      style={{
+        position: 'relative',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        width: NODE_W,
+        cursor: 'pointer',
+        outline: 'none',
+      }}
+    >
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          top: 28,
+          left: -10,
+          width: 38,
+          height: 18,
+          borderRadius: '999px 0 999px 0',
+          background: hovered ? '#bbf7d0' : '#dcfce7',
+          opacity: 0.65,
+          transform: 'rotate(-22deg)',
+          transition: 'all 0.18s ease',
+        }}
+      />
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          top: 28,
+          right: -10,
+          width: 38,
+          height: 18,
+          borderRadius: '0 999px 0 999px',
+          background: hovered ? '#bbf7d0' : '#dcfce7',
+          opacity: 0.65,
+          transform: 'rotate(22deg)',
+          transition: 'all 0.18s ease',
+        }}
+      />
+      {/* Handles */}
       <Handle
         id="top"
         type="target"
         position={Position.Top}
-        style={{ background: '#94a3b8', border: '2px solid #fff', width: 8, height: 8 }}
+        style={{ background: '#cbd5e1', border: '2px solid white', width: 8, height: 8, top: 0 }}
       />
       <Handle
         id="left"
         type="target"
         position={Position.Left}
-        style={{ background: '#f43f5e', border: '2px solid #fff', width: 8, height: 8 }}
+        style={{ background: '#e2e8f0', border: '2px solid white', width: 8, height: 8, top: '78%' }}
       />
 
       {/* Hover tooltip */}
       {hovered && (
         <div
-          className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-3 w-52 -translate-x-1/2 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 shadow-xl"
+          style={{
+            position: 'absolute',
+            bottom: '100%',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            marginBottom: 12,
+            width: 210,
+            background: 'white',
+            borderRadius: 16,
+            border: '1px solid #f1f5f9',
+            boxShadow: '0 12px 40px -8px rgba(0,0,0,0.18), 0 4px 16px -4px rgba(0,0,0,0.08)',
+            padding: '12px 14px',
+            zIndex: 100,
+            pointerEvents: 'none',
+          }}
         >
-          <p className="text-sm font-bold text-slate-800">{data.name}</p>
-          {data.age && <p className="mb-2 text-xs text-slate-500">{data.age}</p>}
-          <div className="space-y-1">
-            {data.activeConditions > 0 && (
-              <p className="flex items-center gap-1.5 text-xs text-amber-700">
-                <Activity className="h-3 w-3" />
-                {data.activeConditions} active condition{data.activeConditions !== 1 ? 's' : ''}
-              </p>
-            )}
-            {data.hereditaryConditions > 0 && (
-              <p className="flex items-center gap-1.5 text-xs text-rose-700">
-                <Heart className="h-3 w-3" />
-                {data.hereditaryConditions} hereditary risk{data.hereditaryConditions !== 1 ? 's' : ''}
-              </p>
-            )}
-            {data.medicationCount > 0 && (
-              <p className="flex items-center gap-1.5 text-xs text-blue-700">
-                <Pill className="h-3 w-3" />
-                {data.medicationCount} medication{data.medicationCount !== 1 ? 's' : ''}
-              </p>
-            )}
-            {data.allergyCount > 0 && (
-              <p className="flex items-center gap-1.5 text-xs text-purple-700">
-                <AlertCircle className="h-3 w-3" />
-                {data.allergyCount} allergi{data.allergyCount !== 1 ? 'es' : 'y'}
-              </p>
-            )}
-            {!hasHealth && (
-              <p className="text-xs text-emerald-700">✓ No health concerns</p>
-            )}
+          {/* Header */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+            {/* Mini avatar */}
+            <div style={{
+              width: 36, height: 36, borderRadius: '50%',
+              border: `2px solid ${ringColor}`,
+              overflow: 'hidden', flexShrink: 0,
+              background: bg, display: 'flex', alignItems: 'center',
+              justifyContent: 'center', fontSize: 13, fontWeight: 900, color: fg,
+            }}>
+              {data.photoUrl ? (
+                <img src={data.photoUrl} alt={data.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : data.initials}
+            </div>
+            <div>
+              <p style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', lineHeight: 1.2 }}>{data.name}</p>
+              {data.age && <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 1 }}>{data.age}</p>}
+            </div>
           </div>
-          <p className="mt-2 text-[10px] text-slate-400">Click to open full profile →</p>
+
+          {/* Divider */}
+          <div style={{ height: 1, background: '#f1f5f9', marginBottom: 8 }} />
+
+          {/* Health rows */}
+          {HEALTH_ITEMS.filter(({ key }) => (data[key] as number) > 0).map(({ key, color, singular }) => {
+            const count = data[key] as number
+            return (
+              <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: color, flexShrink: 0 }} />
+                <span style={{ fontSize: 12, color: '#475569' }}>
+                  {count} {singular}{count !== 1 ? (singular.endsWith('y') ? 'ies' : 's') : ''}
+                </span>
+              </div>
+            )
+          })}
+          {!hasHealth && (
+            <p style={{ fontSize: 12, color: '#10b981', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span>✓</span> No health concerns recorded
+            </p>
+          )}
+
+          {data.gender && (
+            <div style={{ marginTop: 7, fontSize: 11, color: '#64748b' }}>
+              Gender: <span style={{ color: '#0f172a', fontWeight: 700, textTransform: 'capitalize' }}>{data.gender}</span>
+            </div>
+          )}
+
+          <div style={{ marginTop: 8, paddingTop: 7, borderTop: '1px solid #f1f5f9', fontSize: 10, color: '#94a3b8' }}>
+            Click to open full health profile →
+          </div>
         </div>
       )}
 
-      {/* Card */}
+      {/* ── Photo circle ────────────────────────────────── */}
       <div
         style={{
-          border: `2px solid ${borderColor}`,
-          transform: hovered ? 'scale(1.05)' : 'scale(1)',
-          transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+          width: 68,
+          height: 68,
+          borderRadius: '50%',
+          border: `3px solid ${ringColor}`,
           boxShadow: hovered
-            ? `0 8px 24px -4px ${borderColor}50, 0 4px 12px -2px rgba(0,0,0,0.1)`
-            : '0 2px 8px -2px rgba(0,0,0,0.08)',
+            ? `0 0 0 4px ${ringColor}22, 0 4px 16px rgba(0,0,0,0.14)`
+            : `0 0 0 2px white, 0 2px 10px rgba(0,0,0,0.12)`,
+          overflow: 'hidden',
+          background: bg,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 22,
+          fontWeight: 900,
+          color: fg,
+          position: 'relative',
+          zIndex: 2,
+          marginBottom: -18,
+          transition: 'box-shadow 0.15s ease',
+          flexShrink: 0,
         }}
-        className="w-44 cursor-pointer overflow-hidden rounded-2xl bg-white"
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        onClick={() => router.push(`/members/${data.personId}`)}
       >
-        {/* Top color bar */}
-        <div style={{ height: 4, background: borderColor }} />
+        {data.photoUrl ? (
+          <img
+            src={data.photoUrl}
+            alt={data.name}
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          />
+        ) : (
+          data.initials
+        )}
+      </div>
 
-        <div className="p-3 pb-2">
-          <div className="flex items-center gap-2.5">
-            {/* Avatar */}
-            <div
-              className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full text-sm font-black"
-              style={{ background: bg, color: fg }}
-            >
-              {data.initials}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-bold leading-tight text-slate-800">
-                {data.name}
-              </p>
-              <div className="mt-0.5 flex items-center gap-1">
-                {data.age && <p className="text-xs text-slate-500">{data.age}</p>}
-                {genderSymbol && (
-                  <span className="text-xs text-slate-400">{genderSymbol}</span>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* ── Name card ───────────────────────────────────── */}
+      <div
+        style={{
+          width: '100%',
+          background: 'white',
+          borderRadius: 14,
+          border: `1.5px solid ${hovered ? ringColor : '#e8edf3'}`,
+          boxShadow: hovered
+            ? `0 6px 28px ${ringColor}22, 0 2px 10px rgba(0,0,0,0.06)`
+            : '0 1px 6px rgba(0,0,0,0.06)',
+          transform: hovered ? 'translateY(-3px)' : 'translateY(0)',
+          transition: 'all 0.18s ease',
+          paddingTop: 26,
+          paddingBottom: 11,
+          paddingLeft: 10,
+          paddingRight: 10,
+          textAlign: 'center',
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Accent bar */}
+        <div style={{
+          position: 'absolute', top: 0, left: 0, right: 0, height: 3,
+          background: `linear-gradient(90deg, ${ringColor}80, ${ringColor})`,
+        }} />
 
-        {/* Health badges */}
+        <p style={{
+          fontSize: 13,
+          fontWeight: 700,
+          color: '#0f172a',
+          lineHeight: 1.35,
+          marginBottom: 2,
+          wordBreak: 'break-word',
+        }}>
+          {data.name}
+        </p>
+
+        {data.age && (
+          <p style={{ fontSize: 11, color: '#94a3b8', lineHeight: 1 }}>{data.age}</p>
+        )}
+
+        {/* Health indicator dots */}
         {hasHealth && (
-          <div className="flex flex-wrap gap-1 border-t border-slate-100 px-2.5 py-1.5">
-            {data.activeConditions > 0 && (
-              <span className="flex items-center gap-0.5 rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">
-                <Activity className="h-2.5 w-2.5" />
-                {data.activeConditions}
-              </span>
-            )}
-            {data.hereditaryConditions > 0 && (
-              <span className="flex items-center gap-0.5 rounded-full bg-rose-50 px-1.5 py-0.5 text-[10px] font-bold text-rose-700">
-                <Heart className="h-2.5 w-2.5" />
-                {data.hereditaryConditions}
-              </span>
-            )}
-            {data.medicationCount > 0 && (
-              <span className="flex items-center gap-0.5 rounded-full bg-blue-50 px-1.5 py-0.5 text-[10px] font-bold text-blue-700">
-                <Pill className="h-2.5 w-2.5" />
-                {data.medicationCount}
-              </span>
-            )}
-            {data.allergyCount > 0 && (
-              <span className="flex items-center gap-0.5 rounded-full bg-purple-50 px-1.5 py-0.5 text-[10px] font-bold text-purple-700">
-                <AlertCircle className="h-2.5 w-2.5" />
-                {data.allergyCount}
-              </span>
-            )}
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 5, marginTop: 7 }}>
+            {HEALTH_ITEMS.filter(({ key }) => (data[key] as number) > 0).map(({ key, color }) => (
+              <span
+                key={key}
+                title={key}
+                style={{
+                  display: 'inline-block',
+                  width: 7,
+                  height: 7,
+                  borderRadius: '50%',
+                  background: color,
+                }}
+              />
+            ))}
           </div>
         )}
       </div>
@@ -209,13 +328,13 @@ function PersonNode({ data }: NodeProps<PersonFlowNode>) {
         id="bottom"
         type="source"
         position={Position.Bottom}
-        style={{ background: '#94a3b8', border: '2px solid #fff', width: 8, height: 8 }}
+        style={{ background: '#cbd5e1', border: '2px solid white', width: 8, height: 8, bottom: 0 }}
       />
       <Handle
         id="right"
         type="source"
         position={Position.Right}
-        style={{ background: '#f43f5e', border: '2px solid #fff', width: 8, height: 8 }}
+        style={{ background: '#e2e8f0', border: '2px solid white', width: 8, height: 8, top: '78%' }}
       />
     </div>
   )
@@ -223,12 +342,12 @@ function PersonNode({ data }: NodeProps<PersonFlowNode>) {
 
 const nodeTypes = { person: PersonNode }
 
-// ─── Layout algorithm ─────────────────────────────────────────────────────────
+// ─── Layout ───────────────────────────────────────────────────────────────────
 
-const NODE_W = 176
-const NODE_H = 120
+const NODE_W = 152
+const NODE_H = 138   // 68 photo - 18 overlap + ~88 card
 const H_GAP = 80
-const V_GAP = 150
+const V_GAP = 160
 
 function computeLayout(persons: PersonNodeData[], relationships: Relationship[]) {
   const ids = persons.map((p) => p.personId)
@@ -239,6 +358,8 @@ function computeLayout(persons: PersonNodeData[], relationships: Relationship[])
   const spouseOf: Record<string, string[]> = {}
   const spousePairs: [string, string][] = []
   const seenSpouse = new Set<string>()
+  const siblingPairs: [string, string][] = []
+  const seenSibling = new Set<string>()
 
   for (const r of relationships) {
     const a = r.person_id
@@ -258,9 +379,15 @@ function computeLayout(persons: PersonNodeData[], relationships: Relationship[])
         ;(spouseOf[b] ??= []).push(a)
       }
     }
+    if (r.relationship_type === 'sibling') {
+      const key = [a, b].sort().join(':')
+      if (!seenSibling.has(key)) {
+        seenSibling.add(key)
+        siblingPairs.push([a, b])
+      }
+    }
   }
 
-  // Assign generations via BFS
   const gen: Record<string, number> = {}
   const visited = new Set<string>()
   const hasParent = new Set(ids.filter((id) => (childToParents[id]?.length ?? 0) > 0))
@@ -273,25 +400,14 @@ function computeLayout(persons: PersonNodeData[], relationships: Relationship[])
     if (visited.has(id)) continue
     visited.add(id)
     const g = gen[id] ?? 0
-
     for (const sp of spouseOf[id] ?? []) {
-      if (gen[sp] === undefined) {
-        gen[sp] = g
-        queue.push(sp)
-      }
+      if (gen[sp] === undefined) { gen[sp] = g; queue.push(sp) }
     }
     for (const ch of parentToChildren[id] ?? []) {
-      if (gen[ch] === undefined) {
-        gen[ch] = g + 1
-        queue.push(ch)
-      }
+      if (gen[ch] === undefined) { gen[ch] = g + 1; queue.push(ch) }
     }
   }
-
-  // Handle disconnected nodes
-  for (const id of ids) {
-    if (gen[id] === undefined) gen[id] = 0
-  }
+  for (const id of ids) { if (gen[id] === undefined) gen[id] = 0 }
 
   const maxG = Math.max(0, ...Object.values(gen))
   const genGroups: string[][] = Array.from({ length: maxG + 1 }, () => [])
@@ -307,42 +423,32 @@ function computeLayout(persons: PersonNodeData[], relationships: Relationship[])
     if (g === 0) {
       for (const id of grp) {
         if (placed.has(id)) continue
-        ordered.push(id)
-        placed.add(id)
+        ordered.push(id); placed.add(id)
         for (const sp of spouseOf[id] ?? []) {
-          if (!placed.has(sp) && gen[sp] === 0) {
-            ordered.push(sp)
-            placed.add(sp)
-          }
+          if (!placed.has(sp) && gen[sp] === 0) { ordered.push(sp); placed.add(sp) }
         }
       }
     } else {
       const sorted = grp
         .map((id) => {
           const parents = childToParents[id] ?? []
-          const idealX =
-            parents.length > 0
-              ? parents.reduce((s, pid) => s + (positions[pid]?.x ?? 0), 0) / parents.length
-              : 0
+          const idealX = parents.length > 0
+            ? parents.reduce((s, pid) => s + (positions[pid]?.x ?? 0), 0) / parents.length
+            : 0
           return { id, idealX }
         })
         .sort((a, b) => a.idealX - b.idealX)
 
       for (const { id } of sorted) {
         if (placed.has(id)) continue
-        ordered.push(id)
-        placed.add(id)
+        ordered.push(id); placed.add(id)
         for (const sp of spouseOf[id] ?? []) {
-          if (!placed.has(sp) && gen[sp] === g) {
-            ordered.push(sp)
-            placed.add(sp)
-          }
+          if (!placed.has(sp) && gen[sp] === g) { ordered.push(sp); placed.add(sp) }
         }
       }
     }
 
-    const totalW =
-      ordered.length * NODE_W + Math.max(0, ordered.length - 1) * H_GAP
+    const totalW = ordered.length * NODE_W + Math.max(0, ordered.length - 1) * H_GAP
     const startX = -totalW / 2
     ordered.forEach((id, i) => {
       positions[id] = {
@@ -352,16 +458,26 @@ function computeLayout(persons: PersonNodeData[], relationships: Relationship[])
     })
   }
 
-  return { positions, parentToChildren, spousePairs }
+  return { positions, parentToChildren, spousePairs, siblingPairs }
 }
+
+const RELATION_LABEL_STYLE = {
+  fill: '#334155',
+  fontSize: 11,
+  fontWeight: 800,
+} as const
+
+const RELATION_LABEL_BG = {
+  fill: '#fffaf2',
+  fillOpacity: 0.98,
+  stroke: '#e6d8c8',
+  strokeWidth: 1,
+} as const
 
 function buildFlowElements(persons: PersonNodeData[], relationships: Relationship[]) {
   if (persons.length === 0) return { nodes: [] as Node[], edges: [] as Edge[] }
 
-  const { positions, parentToChildren, spousePairs } = computeLayout(
-    persons,
-    relationships
-  )
+  const { positions, parentToChildren, spousePairs, siblingPairs } = computeLayout(persons, relationships)
 
   const nodes: Node[] = persons.map((p) => ({
     id: p.personId,
@@ -372,6 +488,7 @@ function buildFlowElements(persons: PersonNodeData[], relationships: Relationshi
 
   const edges: Edge[] = []
 
+  // Parent → child edges
   for (const [parentId, children] of Object.entries(parentToChildren)) {
     for (const childId of children) {
       edges.push({
@@ -381,11 +498,17 @@ function buildFlowElements(persons: PersonNodeData[], relationships: Relationshi
         sourceHandle: 'bottom',
         targetHandle: 'top',
         type: 'smoothstep',
-        style: { stroke: '#94a3b8', strokeWidth: 2 },
+        style: { stroke: '#95b8a5', strokeWidth: 2.2 },
+        label: 'Parent',
+        labelStyle: RELATION_LABEL_STYLE,
+        labelBgStyle: RELATION_LABEL_BG,
+        labelBgPadding: [8, 4] as [number, number],
+        labelBgBorderRadius: 10,
       })
     }
   }
 
+  // Spouse edges, horizontal line between the two cards
   for (const [a, b] of spousePairs) {
     const posA = positions[a] ?? { x: 0, y: 0 }
     const posB = positions[b] ?? { x: 0, y: 0 }
@@ -398,16 +521,54 @@ function buildFlowElements(persons: PersonNodeData[], relationships: Relationshi
       sourceHandle: 'right',
       targetHandle: 'left',
       type: 'straight',
-      style: { stroke: '#f43f5e', strokeWidth: 2 },
-      label: '♥',
-      labelStyle: { fill: '#f43f5e', fontSize: 14, fontWeight: 'bold' },
-      labelBgStyle: { fill: 'white', fillOpacity: 0.9 },
-      labelBgPadding: [4, 4] as [number, number],
+      style: { stroke: '#dc6f75', strokeWidth: 2.2 },
+      label: '♥ Spouse',
+      labelStyle: { fill: '#be123c', fontSize: 11, fontWeight: 900 },
+      labelBgStyle: { fill: '#fff1f2', fillOpacity: 0.98, stroke: '#fecdd3', strokeWidth: 1 },
+      labelBgPadding: [8, 4] as [number, number],
+      labelBgBorderRadius: 10,
+    })
+  }
+
+  // Sibling edges, shown as dotted side links when the family records them
+  for (const [a, b] of siblingPairs) {
+    const posA = positions[a] ?? { x: 0, y: 0 }
+    const posB = positions[b] ?? { x: 0, y: 0 }
+    const leftId = posA.x <= posB.x ? a : b
+    const rightId = leftId === a ? b : a
+    edges.push({
+      id: `sib-${a}-${b}`,
+      source: leftId,
+      target: rightId,
+      sourceHandle: 'right',
+      targetHandle: 'left',
+      type: 'smoothstep',
+      style: { stroke: '#38bdf8', strokeWidth: 2, strokeDasharray: '5 5' },
+      label: 'Sibling',
+      labelStyle: { fill: '#0369a1', fontSize: 11, fontWeight: 900 },
+      labelBgStyle: { fill: '#f0f9ff', fillOpacity: 0.98, stroke: '#bae6fd', strokeWidth: 1 },
+      labelBgPadding: [8, 4] as [number, number],
+      labelBgBorderRadius: 10,
     })
   }
 
   return { nodes, edges }
 }
+
+// ─── Legend ───────────────────────────────────────────────────────────────────
+
+const HEALTH_LEGEND = [
+  { color: '#10b981', label: 'Healthy' },
+  { color: '#f59e0b', label: 'Active conditions' },
+  { color: '#f43f5e', label: 'Hereditary risks' },
+  { color: '#3b82f6', label: 'Medications' },
+]
+
+const RELATION_LEGEND = [
+  { color: '#95b8a5', label: 'Parent', dash: 'solid' },
+  { color: '#dc6f75', label: 'Spouse', dash: 'solid' },
+  { color: '#38bdf8', label: 'Sibling', dash: '5 5' },
+]
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
@@ -417,13 +578,6 @@ export interface FamilyTreeProps {
   memberCount: number
   relationshipCount: number
 }
-
-const LEGEND = [
-  { color: '#10b981', label: 'Healthy' },
-  { color: '#f59e0b', label: 'Conditions' },
-  { color: '#f43f5e', label: 'Hereditary' },
-  { color: '#3b82f6', label: 'Managed' },
-]
 
 export function FamilyTree({
   persons,
@@ -440,38 +594,71 @@ export function FamilyTree({
   const [edges, , onEdgesChange] = useEdgesState(initEdges)
 
   return (
-    <div className="overflow-hidden rounded-3xl border border-border/70 bg-white/70 shadow-sm backdrop-blur">
+    <div
+      style={{ borderRadius: 24, overflow: 'hidden', border: '1px solid #e8edf3', boxShadow: '0 2px 16px rgba(0,0,0,0.06)', background: 'white' }}
+    >
       {/* Header */}
-      <div className="flex flex-col gap-3 border-b border-border/70 bg-white/80 p-4 md:flex-row md:items-center md:justify-between">
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 12,
+          padding: '14px 20px',
+          borderBottom: '1px solid #f1f5f9',
+          background: 'white',
+        }}
+      >
         <div>
-          <p className="flex items-center gap-2 text-sm font-black">
-            <GitFork className="h-4 w-4 text-primary" />
-            Genogram family tree
+          <p style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 800, color: '#0f172a', margin: 0 }}>
+            <GitFork style={{ width: 15, height: 15, color: '#e11d48' }} />
+            Living relationship tree
           </p>
-          <p className="text-xs text-muted-foreground">
-            {memberCount} members · {relationshipCount} connections · Hover
-            any card for health info, click to open profile
+          <p style={{ fontSize: 11, color: '#94a3b8', margin: '2px 0 0' }}>
+            {memberCount} members · {relationshipCount} connections · Hover a card for health info · Click to open profile
           </p>
         </div>
 
         {/* Legend */}
-        <div className="flex flex-wrap gap-2 text-xs">
-          {LEGEND.map(({ color, label }) => (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {HEALTH_LEGEND.map(({ color, label }) => (
             <span
               key={label}
-              className="flex items-center gap-1.5 rounded-full border border-border/60 bg-white/70 px-3 py-1.5 font-medium text-muted-foreground"
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '4px 11px', borderRadius: 20,
+                border: '1px solid #f1f5f9', background: '#fafafa',
+                fontSize: 11, fontWeight: 600, color: '#64748b',
+              }}
+            >
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} />
+              {label}
+            </span>
+          ))}
+          {RELATION_LEGEND.map(({ color, label, dash }) => (
+            <span
+              key={label}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 7,
+                padding: '4px 11px', borderRadius: 20,
+                border: '1px solid #f1f5f9', background: '#fffaf2',
+                fontSize: 11, fontWeight: 700, color: '#64748b',
+              }}
             >
               <span
-                className="h-2.5 w-2.5 rounded-full"
-                style={{ background: color }}
+                style={{
+                  width: 18,
+                  height: 2,
+                  borderRadius: 99,
+                  background: dash === 'solid' ? color : undefined,
+                  borderTop: dash === 'solid' ? undefined : `2px dashed ${color}`,
+                  flexShrink: 0,
+                }}
               />
               {label}
             </span>
           ))}
-          <span className="flex items-center gap-1.5 rounded-full border border-border/60 bg-white/70 px-3 py-1.5 font-medium text-muted-foreground">
-            <span style={{ color: '#f43f5e', lineHeight: 1 }}>♥</span>
-            Spouse
-          </span>
         </div>
       </div>
 
@@ -484,34 +671,23 @@ export function FamilyTree({
           onEdgesChange={onEdgesChange}
           nodeTypes={nodeTypes}
           fitView
-          fitViewOptions={{ padding: 0.3, maxZoom: 1.2 }}
-          minZoom={0.2}
+          fitViewOptions={{ padding: 0.28, maxZoom: 1.1 }}
+          minZoom={0.15}
           maxZoom={2.5}
           proOptions={{ hideAttribution: true }}
           nodesDraggable={false}
           nodesConnectable={false}
           elementsSelectable={false}
-          style={{
-            background:
-              'radial-gradient(circle at 50% 20%, #ffffff, #f5fbf1 44%, #e6fbf4)',
-          }}
+          style={{ background: 'radial-gradient(circle at 50% 12%, #fffaf1 0%, #f6fff9 32%, #f8f5f0 72%, #f2ede8 100%)' }}
         >
-          <Background
-            variant={BackgroundVariant.Dots}
-            gap={20}
-            size={1}
-            color="#d1fae5"
-          />
+          <Background variant={BackgroundVariant.Dots} gap={22} size={1} color="#e8e0d8" />
           <Controls position="bottom-right" showInteractive={false} />
           <MiniMap
             position="bottom-left"
-            nodeColor={(node) => {
-              const d = node.data as PersonNodeData
-              return STATUS_BORDER[healthStatus(d)] ?? '#94a3b8'
-            }}
+            nodeColor={(node) => STATUS_RING[healthStatus(node.data as PersonNodeData)] ?? '#94a3b8'}
             zoomable
             pannable
-            style={{ border: '1px solid #e2e8f0', borderRadius: 12 }}
+            style={{ border: '1px solid #e8edf3', borderRadius: 12, background: 'white' }}
           />
         </ReactFlow>
       </div>
