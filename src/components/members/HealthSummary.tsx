@@ -1,12 +1,25 @@
-import { HealthCondition, Medication, Allergy } from '@/types'
+'use client'
+
+import { FormEvent, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { HealthCondition, Medication, Allergy, AllergySeverity, ConditionStatus } from '@/types'
+import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Pill, AlertTriangle, Activity } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select'
+import { Pill, AlertTriangle, Activity, Plus } from 'lucide-react'
 
 interface HealthSummaryProps {
+  personId: string
   conditions: HealthCondition[]
   medications: Medication[]
   allergies: Allergy[]
 }
+
+type OpenForm = 'condition' | 'medication' | 'allergy' | null
 
 const statusColors: Record<string, string> = {
   active: 'bg-red-100 text-red-700',
@@ -20,17 +33,131 @@ const severityColors: Record<string, string> = {
   severe: 'bg-red-100 text-red-700',
 }
 
-export function HealthSummary({ conditions, medications, allergies }: HealthSummaryProps) {
+const statusLabels: Record<ConditionStatus, string> = {
+  active: 'Active',
+  chronic: 'Chronic',
+  resolved: 'Resolved',
+}
+
+const severityLabels: Record<AllergySeverity, string> = {
+  mild: 'Mild',
+  moderate: 'Moderate',
+  severe: 'Severe',
+}
+
+function emptyToNull(value: FormDataEntryValue | null) {
+  const text = value?.toString().trim() ?? ''
+  return text.length > 0 ? text : null
+}
+
+function AddButton({ active, onClick }: { active: boolean; onClick: () => void }) {
+  return (
+    <Button type="button" variant={active ? 'secondary' : 'outline'} size="sm" onClick={onClick}>
+      <Plus className="h-3.5 w-3.5" />
+      {active ? 'Close' : 'Add'}
+    </Button>
+  )
+}
+
+export function HealthSummary({ personId, conditions, medications, allergies }: HealthSummaryProps) {
+  const router = useRouter()
+  const supabase = createClient()
+  const [openForm, setOpenForm] = useState<OpenForm>(null)
+  const [conditionStatus, setConditionStatus] = useState<ConditionStatus>('active')
+  const [allergySeverity, setAllergySeverity] = useState<AllergySeverity>('mild')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  function toggleForm(form: OpenForm) {
+    setError('')
+    setOpenForm(openForm === form ? null : form)
+  }
+
+  async function saveCondition(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setSaving(true)
+    setError('')
+
+    const form = new FormData(event.currentTarget)
+    const { error: insertError } = await supabase.from('health_conditions').insert({
+      person_id: personId,
+      name: emptyToNull(form.get('name')),
+      status: conditionStatus,
+      is_hereditary: form.get('is_hereditary') === 'on',
+      diagnosed_date: emptyToNull(form.get('diagnosed_date')),
+      notes: emptyToNull(form.get('notes')),
+    })
+
+    setSaving(false)
+    if (insertError) {
+      setError(insertError.message)
+      return
+    }
+
+    setOpenForm(null)
+    router.refresh()
+  }
+
+  async function saveMedication(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setSaving(true)
+    setError('')
+
+    const form = new FormData(event.currentTarget)
+    const { error: insertError } = await supabase.from('medications').insert({
+      person_id: personId,
+      name: emptyToNull(form.get('name')),
+      dosage: emptyToNull(form.get('dosage')),
+      frequency: emptyToNull(form.get('frequency')),
+      start_date: emptyToNull(form.get('start_date')),
+      end_date: emptyToNull(form.get('end_date')),
+      notes: emptyToNull(form.get('notes')),
+    })
+
+    setSaving(false)
+    if (insertError) {
+      setError(insertError.message)
+      return
+    }
+
+    setOpenForm(null)
+    router.refresh()
+  }
+
+  async function saveAllergy(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setSaving(true)
+    setError('')
+
+    const form = new FormData(event.currentTarget)
+    const { error: insertError } = await supabase.from('allergies').insert({
+      person_id: personId,
+      allergen: emptyToNull(form.get('allergen')),
+      severity: allergySeverity,
+      notes: emptyToNull(form.get('notes')),
+    })
+
+    setSaving(false)
+    if (insertError) {
+      setError(insertError.message)
+      return
+    }
+
+    setOpenForm(null)
+    router.refresh()
+  }
+
   return (
     <div className="grid gap-4 md:grid-cols-3">
       <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm flex items-center gap-2">
+        <CardHeader className="flex flex-row items-center justify-between gap-3 pb-2">
+          <CardTitle className="flex items-center gap-2 text-sm">
             <Activity className="h-4 w-4 text-rose-500" />
             Conditions
           </CardTitle>
+          <AddButton active={openForm === 'condition'} onClick={() => toggleForm('condition')} />
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           {conditions.length === 0 ? (
             <p className="text-sm text-muted-foreground">None recorded</p>
           ) : (
@@ -40,29 +167,66 @@ export function HealthSummary({ conditions, medications, allergies }: HealthSumm
                   <div>
                     <p className="text-sm font-medium">{c.name}</p>
                     {c.is_hereditary && (
-                      <span className="text-xs text-amber-600 flex items-center gap-1">
+                      <span className="flex items-center gap-1 text-xs text-amber-600">
                         <AlertTriangle className="h-3 w-3" /> Hereditary
                       </span>
                     )}
                   </div>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColors[c.status]}`}>
+                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[c.status]}`}>
                     {c.status}
                   </span>
                 </li>
               ))}
             </ul>
           )}
+
+          {openForm === 'condition' && (
+            <form onSubmit={saveCondition} className="space-y-3 rounded-xl border bg-muted/20 p-3">
+              <div className="space-y-1.5">
+                <Label>Condition name</Label>
+                <Input name="name" required placeholder="Asthma, diabetes, migraine" />
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label>Status</Label>
+                  <Select value={conditionStatus} onValueChange={(value) => setConditionStatus(value as ConditionStatus)}>
+                    <SelectTrigger className="w-full">
+                      <span>{statusLabels[conditionStatus]}</span>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="chronic">Chronic</SelectItem>
+                      <SelectItem value="resolved">Resolved</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Diagnosed date</Label>
+                  <Input name="diagnosed_date" type="date" />
+                </div>
+              </div>
+              <label className="flex items-center gap-2 text-sm">
+                <input name="is_hereditary" type="checkbox" className="h-4 w-4 rounded border-input" />
+                Hereditary or family risk
+              </label>
+              <Textarea name="notes" placeholder="Notes, triggers, doctor guidance..." rows={2} />
+              <Button type="submit" size="sm" disabled={saving}>
+                {saving ? 'Saving...' : 'Save condition'}
+              </Button>
+            </form>
+          )}
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm flex items-center gap-2">
+        <CardHeader className="flex flex-row items-center justify-between gap-3 pb-2">
+          <CardTitle className="flex items-center gap-2 text-sm">
             <Pill className="h-4 w-4 text-blue-500" />
             Medications
           </CardTitle>
+          <AddButton active={openForm === 'medication'} onClick={() => toggleForm('medication')} />
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           {medications.length === 0 ? (
             <p className="text-sm text-muted-foreground">None recorded</p>
           ) : (
@@ -79,17 +243,51 @@ export function HealthSummary({ conditions, medications, allergies }: HealthSumm
               ))}
             </ul>
           )}
+
+          {openForm === 'medication' && (
+            <form onSubmit={saveMedication} className="space-y-3 rounded-xl border bg-muted/20 p-3">
+              <div className="space-y-1.5">
+                <Label>Medication name</Label>
+                <Input name="name" required placeholder="Medication name" />
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label>Dosage</Label>
+                  <Input name="dosage" placeholder="10 mg" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Frequency</Label>
+                  <Input name="frequency" placeholder="Once daily" />
+                </div>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label>Start date</Label>
+                  <Input name="start_date" type="date" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>End date</Label>
+                  <Input name="end_date" type="date" />
+                </div>
+              </div>
+              <Textarea name="notes" placeholder="Notes, prescribing doctor, refill details..." rows={2} />
+              <Button type="submit" size="sm" disabled={saving}>
+                {saving ? 'Saving...' : 'Save medication'}
+              </Button>
+            </form>
+          )}
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm flex items-center gap-2">
+        <CardHeader className="flex flex-row items-center justify-between gap-3 pb-2">
+          <CardTitle className="flex items-center gap-2 text-sm">
             <AlertTriangle className="h-4 w-4 text-amber-500" />
             Allergies
           </CardTitle>
+          <AddButton active={openForm === 'allergy'} onClick={() => toggleForm('allergy')} />
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           {allergies.length === 0 ? (
             <p className="text-sm text-muted-foreground">None recorded</p>
           ) : (
@@ -98,7 +296,7 @@ export function HealthSummary({ conditions, medications, allergies }: HealthSumm
                 <li key={a.id} className="flex items-center justify-between gap-2">
                   <p className="text-sm font-medium">{a.allergen}</p>
                   {a.severity && (
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${severityColors[a.severity]}`}>
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${severityColors[a.severity]}`}>
                       {a.severity}
                     </span>
                   )}
@@ -106,8 +304,36 @@ export function HealthSummary({ conditions, medications, allergies }: HealthSumm
               ))}
             </ul>
           )}
+
+          {openForm === 'allergy' && (
+            <form onSubmit={saveAllergy} className="space-y-3 rounded-xl border bg-muted/20 p-3">
+              <div className="space-y-1.5">
+                <Label>Allergen</Label>
+                <Input name="allergen" required placeholder="Peanuts, penicillin, pollen" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Severity</Label>
+                <Select value={allergySeverity} onValueChange={(value) => setAllergySeverity(value as AllergySeverity)}>
+                  <SelectTrigger className="w-full">
+                    <span>{severityLabels[allergySeverity]}</span>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="mild">Mild</SelectItem>
+                    <SelectItem value="moderate">Moderate</SelectItem>
+                    <SelectItem value="severe">Severe</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Textarea name="notes" placeholder="Reaction, treatment plan, emergency notes..." rows={2} />
+              <Button type="submit" size="sm" disabled={saving}>
+                {saving ? 'Saving...' : 'Save allergy'}
+              </Button>
+            </form>
+          )}
         </CardContent>
       </Card>
+
+      {error && <p className="md:col-span-3 text-sm text-destructive">{error}</p>}
     </div>
   )
 }

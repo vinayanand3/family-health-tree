@@ -16,6 +16,7 @@ import {
   useEdgesState,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { CalendarDays, GitFork } from 'lucide-react'
 import { Relationship } from '@/types'
@@ -88,7 +89,6 @@ function formatAppointmentDate(value: string) {
 
 function PersonNode({ data }: NodeProps<PersonFlowNode>) {
   const [hovered, setHovered] = useState(false)
-  const router = useRouter()
   const status = healthStatus(data)
   const ringColor = STATUS_RING[status]
   const { bg, fg } = STATUS_AVATAR[status]
@@ -99,23 +99,12 @@ function PersonNode({ data }: NodeProps<PersonFlowNode>) {
     data.allergyCount > 0
 
   const NODE_W = 152
-  const openProfile = () => router.push(`/members/${data.personId}`)
 
   return (
     <div
       className="nodrag nopan"
-      role="button"
-      tabIndex={0}
-      aria-label={`Open ${data.name}'s health profile`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onClick={openProfile}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          openProfile()
-        }
-      }}
       style={{
         position: 'relative',
         display: 'flex',
@@ -126,6 +115,18 @@ function PersonNode({ data }: NodeProps<PersonFlowNode>) {
         outline: 'none',
       }}
     >
+      <Link
+        href={`/members/${data.personId}`}
+        className="nodrag nopan"
+        aria-label={`Open ${data.name}'s health profile`}
+        style={{
+          position: 'absolute',
+          inset: -14,
+          zIndex: 20,
+          borderRadius: 24,
+          cursor: 'pointer',
+        }}
+      />
       <div
         aria-hidden="true"
         style={{

@@ -134,6 +134,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
 
         <TabsContent value="health" className="mt-4">
           <HealthSummary
+            personId={id}
             conditions={conditions}
             medications={medications}
             allergies={allergies}
