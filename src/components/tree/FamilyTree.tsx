@@ -17,7 +17,7 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { useRouter } from 'next/navigation'
-import { GitFork } from 'lucide-react'
+import { CalendarDays, GitFork } from 'lucide-react'
 import { Relationship } from '@/types'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -33,6 +33,13 @@ export type PersonNodeData = {
   hereditaryConditions: number
   medicationCount: number
   allergyCount: number
+  upcomingAppointments: {
+    id: string
+    title: string
+    appointmentDate: string
+    doctorName: string | null
+    location: string | null
+  }[]
   [key: string]: unknown
 }
 
@@ -68,6 +75,15 @@ const HEALTH_ITEMS = [
   { key: 'allergyCount' as const, color: '#a855f7', singular: 'allergy' },
 ]
 
+function formatAppointmentDate(value: string) {
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(new Date(value))
+}
+
 // ─── Person Node ──────────────────────────────────────────────────────────────
 
 function PersonNode({ data }: NodeProps<PersonFlowNode>) {
@@ -87,6 +103,7 @@ function PersonNode({ data }: NodeProps<PersonFlowNode>) {
 
   return (
     <div
+      className="nodrag nopan"
       role="button"
       tabIndex={0}
       aria-label={`Open ${data.name}'s health profile`}
@@ -218,6 +235,35 @@ function PersonNode({ data }: NodeProps<PersonFlowNode>) {
               Gender: <span style={{ color: '#0f172a', fontWeight: 700, textTransform: 'capitalize' }}>{data.gender}</span>
             </div>
           )}
+
+          <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid #f1f5f9' }}>
+            <p style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, fontSize: 11, fontWeight: 800, color: '#0f172a' }}>
+              <CalendarDays style={{ width: 12, height: 12, color: '#e11d48' }} />
+              Upcoming appointments
+            </p>
+            {data.upcomingAppointments.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {data.upcomingAppointments.slice(0, 3).map((appointment) => (
+                  <div key={appointment.id} style={{ borderRadius: 10, background: '#fff7ed', padding: '7px 8px' }}>
+                    <p style={{ fontSize: 11, fontWeight: 800, color: '#0f172a', lineHeight: 1.25 }}>
+                      {appointment.title}
+                    </p>
+                    <p style={{ marginTop: 2, fontSize: 10, color: '#64748b', lineHeight: 1.25 }}>
+                      {formatAppointmentDate(appointment.appointmentDate)}
+                      {appointment.doctorName ? ` · ${appointment.doctorName}` : ''}
+                    </p>
+                    {appointment.location && (
+                      <p style={{ marginTop: 1, fontSize: 10, color: '#94a3b8', lineHeight: 1.25 }}>
+                        {appointment.location}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p style={{ fontSize: 11, color: '#94a3b8' }}>No upcoming appointments</p>
+            )}
+          </div>
 
           <div style={{ marginTop: 8, paddingTop: 7, borderTop: '1px solid #f1f5f9', fontSize: 10, color: '#94a3b8' }}>
             Click to open full health profile →
@@ -585,6 +631,7 @@ export function FamilyTree({
   memberCount,
   relationshipCount,
 }: FamilyTreeProps) {
+  const router = useRouter()
   const { nodes: initNodes, edges: initEdges } = useMemo(
     () => buildFlowElements(persons, relationships),
     [persons, relationships]
@@ -678,6 +725,7 @@ export function FamilyTree({
           nodesDraggable={false}
           nodesConnectable={false}
           elementsSelectable={false}
+          onNodeClick={(_, node) => router.push(`/members/${(node.data as PersonNodeData).personId}`)}
           style={{ background: 'radial-gradient(circle at 50% 12%, #fffaf1 0%, #f6fff9 32%, #f8f5f0 72%, #f2ede8 100%)' }}
         >
           <Background variant={BackgroundVariant.Dots} gap={22} size={1} color="#e8e0d8" />

@@ -27,6 +27,14 @@ type HealthCounts = Record<
   }
 >
 
+type UpcomingAppointmentPreview = {
+  id: string
+  title: string
+  appointmentDate: string
+  doctorName: string | null
+  location: string | null
+}
+
 export default async function TreePage() {
   const supabase = await createClient()
   const {
@@ -57,7 +65,7 @@ export default async function TreePage() {
   const relationships: Relationship[] = relationshipsResult.data ?? []
   const personIds = persons.map((p) => p.id)
 
-  const [conditionsResult, medsResult, allergiesResult] =
+  const [conditionsResult, medsResult, allergiesResult, appointmentsResult] =
     personIds.length > 0
       ? await Promise.all([
           supabase
@@ -72,8 +80,15 @@ export default async function TreePage() {
             .from('allergies')
             .select('person_id')
             .in('person_id', personIds),
+          supabase
+            .from('appointments')
+            .select('id, person_id, title, appointment_date, doctor_name, location')
+            .in('person_id', personIds)
+            .eq('is_completed', false)
+            .gte('appointment_date', new Date().toISOString())
+            .order('appointment_date', { ascending: true }),
         ])
-      : [{ data: [] }, { data: [] }, { data: [] }]
+      : [{ data: [] }, { data: [] }, { data: [] }, { data: [] }]
 
   const healthCounts: HealthCounts = Object.fromEntries(
     personIds.map((id) => [
@@ -102,6 +117,21 @@ export default async function TreePage() {
       healthCounts[allergy.person_id].allergyCount += 1
   }
 
+  const upcomingAppointments: Record<string, UpcomingAppointmentPreview[]> =
+    Object.fromEntries(personIds.map((id) => [id, []]))
+
+  for (const appointment of appointmentsResult.data ?? []) {
+    const personAppointments = upcomingAppointments[appointment.person_id]
+    if (!personAppointments || personAppointments.length >= 3) continue
+    personAppointments.push({
+      id: appointment.id,
+      title: appointment.title,
+      appointmentDate: appointment.appointment_date,
+      doctorName: appointment.doctor_name,
+      location: appointment.location,
+    })
+  }
+
   // Build flat person nodes for the tree renderer
   const personNodes: PersonNodeData[] = persons.map((p) => ({
     personId: p.id,
@@ -110,6 +140,7 @@ export default async function TreePage() {
     age: getAgeLabel(p.date_of_birth),
     gender: p.gender,
     photoUrl: p.photo_url,
+    upcomingAppointments: upcomingAppointments[p.id] ?? [],
     ...(healthCounts[p.id] ?? {
       activeConditions: 0,
       hereditaryConditions: 0,
