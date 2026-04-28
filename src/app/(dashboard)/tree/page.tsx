@@ -1,18 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { FamilyTree } from '@/components/tree/FamilyTree'
-import { Person, Relationship, TreeNode } from '@/types'
+import { FamilyTree, PersonNodeData } from '@/components/tree/FamilyTree'
+import { Person, Relationship } from '@/types'
 import { buttonVariants } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
 import { GitFork, Plus, Users } from 'lucide-react'
-
-type HealthCounts = Record<string, {
-  activeConditions: number
-  hereditaryConditions: number
-  medicationCount: number
-  allergyCount: number
-}>
 
 function getAgeLabel(dateOfBirth: string | null) {
   if (!dateOfBirth) return 'Age unknown'
@@ -24,54 +17,21 @@ function getAgeLabel(dateOfBirth: string | null) {
   return `${age} yrs`
 }
 
-function buildTree(persons: Person[], relationships: Relationship[], healthCounts: HealthCounts): TreeNode {
-  if (persons.length === 0) return { name: 'No members yet' }
-
-  const childMap: Record<string, string[]> = {}
-  const hasParent = new Set<string>()
-
-  for (const rel of relationships) {
-    if (rel.relationship_type === 'parent') {
-      if (!childMap[rel.person_id]) childMap[rel.person_id] = []
-      childMap[rel.person_id].push(rel.related_person_id)
-      hasParent.add(rel.related_person_id)
-    }
+type HealthCounts = Record<
+  string,
+  {
+    activeConditions: number
+    hereditaryConditions: number
+    medicationCount: number
+    allergyCount: number
   }
-
-  const personMap = Object.fromEntries(persons.map((p) => [p.id, p]))
-  const renderedPeople = new Set<string>()
-
-  function buildNode(personId: string): TreeNode {
-    renderedPeople.add(personId)
-    const p = personMap[personId]
-    const name = `${p.first_name}${p.last_name ? ' ' + p.last_name : ''}`
-    const children = (childMap[personId] ?? [])
-      .filter((childId) => !renderedPeople.has(childId))
-      .map(buildNode)
-    const counts = healthCounts[personId] ?? {
-      activeConditions: 0,
-      hereditaryConditions: 0,
-      medicationCount: 0,
-      allergyCount: 0,
-    }
-    return {
-      name,
-      personId,
-      initials: `${p.first_name[0]}${p.last_name?.[0] ?? ''}`.toUpperCase(),
-      age: getAgeLabel(p.date_of_birth),
-      ...counts,
-      ...(children.length > 0 ? { children } : {}),
-    }
-  }
-
-  const roots = persons.filter((p) => !hasParent.has(p.id))
-  if (roots.length === 1) return buildNode(roots[0].id)
-  return { name: 'Family', children: roots.map((r) => buildNode(r.id)) }
-}
+>
 
 export default async function TreePage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
   const { data: familyMember } = await supabase
     .from('family_members')
@@ -82,46 +42,84 @@ export default async function TreePage() {
   if (!familyMember) redirect('/settings')
 
   const [personsResult, relationshipsResult] = await Promise.all([
-    supabase.from('persons').select('*').eq('family_id', familyMember.family_id).order('created_at'),
-    supabase.from('relationships').select('*').eq('family_id', familyMember.family_id),
+    supabase
+      .from('persons')
+      .select('*')
+      .eq('family_id', familyMember.family_id)
+      .order('created_at'),
+    supabase
+      .from('relationships')
+      .select('*')
+      .eq('family_id', familyMember.family_id),
   ])
 
   const persons: Person[] = personsResult.data ?? []
   const relationships: Relationship[] = relationshipsResult.data ?? []
-  const personIds = persons.map((person) => person.id)
+  const personIds = persons.map((p) => p.id)
 
-  const [conditionsResult, medsResult, allergiesResult] = personIds.length > 0
-    ? await Promise.all([
-      supabase.from('health_conditions').select('person_id, status, is_hereditary').in('person_id', personIds),
-      supabase.from('medications').select('person_id').in('person_id', personIds),
-      supabase.from('allergies').select('person_id').in('person_id', personIds),
+  const [conditionsResult, medsResult, allergiesResult] =
+    personIds.length > 0
+      ? await Promise.all([
+          supabase
+            .from('health_conditions')
+            .select('person_id, status, is_hereditary')
+            .in('person_id', personIds),
+          supabase
+            .from('medications')
+            .select('person_id')
+            .in('person_id', personIds),
+          supabase
+            .from('allergies')
+            .select('person_id')
+            .in('person_id', personIds),
+        ])
+      : [{ data: [] }, { data: [] }, { data: [] }]
+
+  const healthCounts: HealthCounts = Object.fromEntries(
+    personIds.map((id) => [
+      id,
+      {
+        activeConditions: 0,
+        hereditaryConditions: 0,
+        medicationCount: 0,
+        allergyCount: 0,
+      },
     ])
-    : [{ data: [] }, { data: [] }, { data: [] }]
-
-  const healthCounts: HealthCounts = Object.fromEntries(personIds.map((id) => [id, {
-    activeConditions: 0,
-    hereditaryConditions: 0,
-    medicationCount: 0,
-    allergyCount: 0,
-  }]))
+  )
 
   for (const condition of conditionsResult.data ?? []) {
     const count = healthCounts[condition.person_id]
     if (!count) continue
-    if (condition.status === 'active' || condition.status === 'chronic') count.activeConditions += 1
+    if (condition.status === 'active' || condition.status === 'chronic')
+      count.activeConditions += 1
     if (condition.is_hereditary) count.hereditaryConditions += 1
   }
-
   for (const med of medsResult.data ?? []) {
     if (healthCounts[med.person_id]) healthCounts[med.person_id].medicationCount += 1
   }
-
   for (const allergy of allergiesResult.data ?? []) {
-    if (healthCounts[allergy.person_id]) healthCounts[allergy.person_id].allergyCount += 1
+    if (healthCounts[allergy.person_id])
+      healthCounts[allergy.person_id].allergyCount += 1
   }
 
-  const treeData = buildTree(persons, relationships, healthCounts)
-  const connectedCount = relationships.filter((rel) => rel.relationship_type === 'parent').length
+  // Build flat person nodes for the genogram renderer
+  const personNodes: PersonNodeData[] = persons.map((p) => ({
+    personId: p.id,
+    name: `${p.first_name}${p.last_name ? ' ' + p.last_name : ''}`,
+    initials: `${p.first_name[0]}${p.last_name?.[0] ?? ''}`.toUpperCase(),
+    age: getAgeLabel(p.date_of_birth),
+    gender: p.gender,
+    ...(healthCounts[p.id] ?? {
+      activeConditions: 0,
+      hereditaryConditions: 0,
+      medicationCount: 0,
+      allergyCount: 0,
+    }),
+  }))
+
+  const parentLinks = relationships.filter(
+    (r) => r.relationship_type === 'parent'
+  ).length
 
   return (
     <div className="space-y-5">
@@ -134,12 +132,13 @@ export default async function TreePage() {
             </Badge>
             <Badge variant="outline" className="gap-1 bg-white">
               <GitFork className="h-3 w-3" />
-              {connectedCount} family links
+              {parentLinks} family links
             </Badge>
           </div>
           <h1 className="text-3xl font-black">Family Tree</h1>
-          <p className="text-muted-foreground text-sm">
-            Pan, zoom, and click any profile card to open that person&apos;s health record.
+          <p className="text-sm text-muted-foreground">
+            Pan, zoom, and click any profile card to open that person&apos;s
+            health record.
           </p>
         </div>
         <Link href="/members/new" className={buttonVariants({ size: 'lg' })}>
@@ -149,14 +148,19 @@ export default async function TreePage() {
       </div>
 
       {persons.length === 0 ? (
-        <div className="text-center py-20 border rounded-lg bg-muted/20">
-          <p className="text-muted-foreground mb-4">No family members yet.</p>
+        <div className="rounded-lg border bg-muted/20 py-20 text-center">
+          <p className="mb-4 text-muted-foreground">No family members yet.</p>
           <Link href="/members/new" className={buttonVariants({})}>
             Add your first member
           </Link>
         </div>
       ) : (
-        <FamilyTree data={treeData} memberCount={persons.length} relationshipCount={connectedCount} />
+        <FamilyTree
+          persons={personNodes}
+          relationships={relationships}
+          memberCount={persons.length}
+          relationshipCount={relationships.length}
+        />
       )}
     </div>
   )
