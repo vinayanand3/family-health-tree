@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { Person, HealthCondition } from '@/types'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { formatDistanceToNow } from 'date-fns'
 import { AlertTriangle, Activity, ChevronRight } from 'lucide-react'
 
@@ -22,6 +22,7 @@ export function MemberCard({ person, conditions = [] }: MemberCardProps) {
         <CardHeader className="pb-2">
           <div className="flex items-center gap-3">
             <Avatar className="size-12 ring-4 ring-primary/10">
+              {person.photo_url && <AvatarImage src={person.photo_url} alt={`${person.first_name} ${person.last_name ?? ''}`} />}
               <AvatarFallback className="bg-primary/10 text-primary font-black">
                 {initials}
               </AvatarFallback>

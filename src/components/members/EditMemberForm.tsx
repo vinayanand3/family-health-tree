@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select'
+import { ProfilePhotoUpload } from '@/components/members/ProfilePhotoUpload'
 import Link from 'next/link'
 
 const GENDER_LABELS: Record<string, string> = { male: 'Male', female: 'Female', other: 'Other' }
@@ -23,6 +24,7 @@ interface EditMemberFormProps {
     last_name?: string | null
     date_of_birth?: string | null
     gender?: string | null
+    photo_url?: string | null
     notes?: string | null
   }
 }
@@ -34,16 +36,21 @@ export function EditMemberForm({ person }: EditMemberFormProps) {
   const [error, setError] = useState('')
   const [selectedGender, setSelectedGender] = useState(person.gender ?? '')
 
-  const { register, handleSubmit, setValue, formState: { errors } } = useForm<PersonFormData>({
+  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<PersonFormData>({
     resolver: zodResolver(personSchema),
     defaultValues: {
       first_name: person.first_name,
       last_name: person.last_name ?? undefined,
       date_of_birth: person.date_of_birth ?? undefined,
       gender: person.gender ?? undefined,
+      photo_url: person.photo_url ?? undefined,
       notes: person.notes ?? undefined,
     },
   })
+  const firstName = watch('first_name') ?? ''
+  const lastName = watch('last_name') ?? ''
+  const photoUrl = watch('photo_url') ?? ''
+  const initials = `${firstName[0] ?? ''}${lastName[0] ?? ''}`.toUpperCase()
 
   async function onSubmit(data: PersonFormData) {
     setLoading(true)
@@ -51,7 +58,7 @@ export function EditMemberForm({ person }: EditMemberFormProps) {
 
     const { error: updateError } = await supabase
       .from('persons')
-      .update(data)
+      .update({ ...data, photo_url: data.photo_url || null })
       .eq('id', person.id)
 
     if (updateError) {
@@ -110,6 +117,12 @@ export function EditMemberForm({ person }: EditMemberFormProps) {
         <Label>Notes</Label>
         <Textarea {...register('notes')} placeholder="Any additional notes..." rows={3} />
       </div>
+
+      <ProfilePhotoUpload
+        value={photoUrl}
+        initials={initials}
+        onChange={(url) => setValue('photo_url', url || undefined, { shouldDirty: true })}
+      />
 
       {error && <p className="text-sm text-destructive">{error}</p>}
 

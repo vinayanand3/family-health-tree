@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -13,19 +13,38 @@ export default function SignupPage() {
   const supabase = createClient()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [inviteCode, setInviteCode] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
+
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get('invite') ?? ''
+    if (code) {
+      const normalizedCode = code.trim().toLowerCase()
+      queueMicrotask(() => setInviteCode(normalizedCode))
+      window.localStorage.setItem('familyhealth_invite_code', normalizedCode)
+    }
+  }, [])
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
     setError('')
 
+    const normalizedInviteCode = inviteCode.trim().toLowerCase()
+    if (normalizedInviteCode) {
+      window.localStorage.setItem('familyhealth_invite_code', normalizedInviteCode)
+    }
+
+    const redirectUrl = `${window.location.origin}/auth/callback${normalizedInviteCode ? `?invite=${normalizedInviteCode}` : ''}`
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      options: {
+        emailRedirectTo: redirectUrl,
+        data: normalizedInviteCode ? { invite_code: normalizedInviteCode } : undefined,
+      },
     })
 
     if (error) {
@@ -40,10 +59,15 @@ export default function SignupPage() {
     setLoading(true)
     setError('')
 
+    const normalizedInviteCode = inviteCode.trim().toLowerCase()
+    if (normalizedInviteCode) {
+      window.localStorage.setItem('familyhealth_invite_code', normalizedInviteCode)
+    }
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: `${window.location.origin}/auth/callback${normalizedInviteCode ? `?invite=${normalizedInviteCode}` : ''}`,
       },
     })
 
@@ -93,6 +117,20 @@ export default function SignupPage() {
                 </div>
 
                 <form onSubmit={handleSignup} className="space-y-4">
+                  <div className="rounded-xl border bg-muted/30 p-3">
+                    <Label htmlFor="inviteCode">Joining a family?</Label>
+                    <Input
+                      id="inviteCode"
+                      value={inviteCode}
+                      onChange={(e) => setInviteCode(e.target.value)}
+                      placeholder="Paste invite code, optional"
+                      className="mt-2 font-mono"
+                    />
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      If a relative invited you, enter their code here. After signup, we will connect this account to their family group.
+                    </p>
+                  </div>
+
                   <div className="space-y-1.5">
                     <Label htmlFor="email">Email</Label>
                     <Input

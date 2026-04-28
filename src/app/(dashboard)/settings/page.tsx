@@ -24,6 +24,7 @@ export default function SettingsPage() {
   const [inviteCode, setInviteCode] = useState('')
   const [loading, setLoading] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [linkCopied, setLinkCopied] = useState(false)
   const [message, setMessage] = useState('')
   const [inviteEmail, setInviteEmail] = useState('')
 
@@ -40,6 +41,16 @@ export default function SettingsPage() {
     }
     loadFamily()
   }, [supabase])
+
+  useEffect(() => {
+    const savedInviteCode = window.localStorage.getItem('familyhealth_invite_code')
+    if (savedInviteCode && !family?.families) {
+      queueMicrotask(() => {
+        setInviteCode(savedInviteCode)
+        setMessage('Invite code detected. Click Join Family to connect to that family group.')
+      })
+    }
+  }, [family?.families])
 
   async function createFamily() {
     if (!newFamilyName.trim()) return
@@ -87,6 +98,7 @@ export default function SettingsPage() {
 
     setFamily({ ...family, families: fam, role: 'member', family_id: fam.id })
     setInviteCode('')
+    window.localStorage.removeItem('familyhealth_invite_code')
     setMessage('Joined family!')
     setLoading(false)
   }
@@ -97,14 +109,21 @@ export default function SettingsPage() {
     setTimeout(() => setCopied(false), 2000)
   }
 
+  function copyInviteLink() {
+    const code = family?.families?.invite_code ?? ''
+    navigator.clipboard.writeText(`https://family-health-tree.vercel.app/signup?invite=${code}`)
+    setLinkCopied(true)
+    setTimeout(() => setLinkCopied(false), 2000)
+  }
+
   function sendEmailInvite() {
     const code = family?.families?.invite_code ?? ''
     const appUrl = 'https://family-health-tree.vercel.app'
     const subject = encodeURIComponent(`Join my family on FamilyHealth`)
     const body = encodeURIComponent(
       `Hi,\n\nI'd like to invite you to join our family health tracker on FamilyHealth.\n\n` +
-      `1. Sign up or log in at: ${appUrl}/signup\n` +
-      `2. Go to Settings and enter this invite code: ${code}\n\n` +
+      `1. Sign up at: ${appUrl}/signup?invite=${code}\n` +
+      `2. If the code is not filled automatically, enter this invite code in Settings: ${code}\n\n` +
       `See you there!`
     )
     window.location.href = `mailto:${inviteEmail}?subject=${subject}&body=${body}`
@@ -138,6 +157,18 @@ export default function SettingsPage() {
                   {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
                 </Button>
               </div>
+              <div className="mt-3 rounded-xl border bg-muted/30 p-3">
+                <p className="text-sm font-bold">How relatives join</p>
+                <ol className="mt-2 list-decimal space-y-1 pl-4 text-xs text-muted-foreground">
+                  <li>Send them this invite link or code.</li>
+                  <li>They create their own account.</li>
+                  <li>The code connects their account to this shared family workspace.</li>
+                </ol>
+                <Button type="button" variant="outline" size="sm" onClick={copyInviteLink} className="mt-3">
+                  {linkCopied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                  {linkCopied ? 'Invite link copied' : 'Copy invite link'}
+                </Button>
+              </div>
             </div>
 
             <Separator />
@@ -169,6 +200,15 @@ export default function SettingsPage() {
         </Card>
       ) : (
         <div className="space-y-4">
+          <Card className="border-primary/30 bg-primary/5">
+            <CardHeader>
+              <CardTitle className="text-base">Choose how to start</CardTitle>
+              <CardDescription>
+                Create a new family if you are setting up the workspace. Join a family if someone already sent you an invite code.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Create a Family</CardTitle>

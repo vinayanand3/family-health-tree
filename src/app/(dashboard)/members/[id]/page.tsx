@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { HealthSummary } from '@/components/members/HealthSummary'
 import { AppointmentList } from '@/components/appointments/AppointmentList'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -82,6 +82,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
       {/* Profile header */}
       <div className="flex items-center gap-4">
         <Avatar className="h-16 w-16">
+          {person.photo_url && <AvatarImage src={person.photo_url} alt={`${person.first_name} ${person.last_name ?? ''}`} />}
           <AvatarFallback className="text-lg font-semibold bg-primary/10 text-primary">
             {initials}
           </AvatarFallback>

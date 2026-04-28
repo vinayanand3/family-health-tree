@@ -38,7 +38,13 @@ This creates all tables and Row-Level Security policies.
 4. Keep it **private** (not public)
 5. Add a policy: allow read/insert for authenticated users in their family
 
-## 6. Start the dev server
+## 6. Create a Storage bucket for profile photos
+
+Run `supabase/migrations/002_profile_photos_storage.sql` in the SQL Editor.
+
+This creates a public `profile-photos` bucket for member avatars. Authenticated users can upload photos into their own folder, and the public URL is saved in `persons.photo_url` so the profile and tree can display the image.
+
+## 7. Start the dev server
 
 ```bash
 npm run dev

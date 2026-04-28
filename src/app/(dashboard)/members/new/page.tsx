@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ProfilePhotoUpload } from '@/components/members/ProfilePhotoUpload'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 
@@ -28,9 +29,13 @@ export default function NewMemberPage() {
   const [relatedPersonId, setRelatedPersonId] = useState('')
   const [relationshipRole, setRelationshipRole] = useState<RelativeRole>('child')
 
-  const { register, handleSubmit, setValue, formState: { errors } } = useForm<PersonFormData>({
+  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<PersonFormData>({
     resolver: zodResolver(personSchema),
   })
+  const firstName = watch('first_name') ?? ''
+  const lastName = watch('last_name') ?? ''
+  const photoUrl = watch('photo_url') ?? ''
+  const initials = `${firstName[0] ?? ''}${lastName[0] ?? ''}`.toUpperCase()
 
   useEffect(() => {
     async function loadFamilyMembers() {
@@ -70,7 +75,7 @@ export default function NewMemberPage() {
 
     const { data: person, error: insertError } = await supabase
       .from('persons')
-      .insert({ ...data, family_id: activeFamilyId })
+      .insert({ ...data, photo_url: data.photo_url || null, family_id: activeFamilyId })
       .select()
       .single()
 
@@ -155,6 +160,12 @@ export default function NewMemberPage() {
               <Label>Notes</Label>
               <Textarea {...register('notes')} placeholder="Any additional notes..." rows={3} />
             </div>
+
+            <ProfilePhotoUpload
+              value={photoUrl}
+              initials={initials}
+              onChange={(url) => setValue('photo_url', url || undefined, { shouldDirty: true })}
+            />
 
             {persons.length > 0 && (
               <div className="space-y-3 rounded-xl border bg-muted/20 p-3">

@@ -5,6 +5,7 @@ export const personSchema = z.object({
   last_name: z.string().optional(),
   date_of_birth: z.string().optional(),
   gender: z.string().optional(),
+  photo_url: z.string().optional(),
   notes: z.string().optional(),
 })
 
