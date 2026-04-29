@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { CalendarDays, HeartPulse, LayoutDashboard, LogOut, Settings, TreePine, UserPlus, Users } from 'lucide-react'
+import { CalendarDays, HeartPulse, LayoutDashboard, LogOut, Menu, Settings, TreePine, UserPlus, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface HeaderProps {
@@ -47,6 +47,27 @@ export function Header({ userEmail }: HeaderProps) {
         </Link>
         <div className="flex-1" />
         <DropdownMenu>
+          <DropdownMenuTrigger className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border/70 bg-white/75 text-foreground shadow-sm outline-none transition-colors hover:bg-white focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:hidden">
+            <Menu className="h-5 w-5" />
+            <span className="sr-only">Open navigation menu</span>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56 md:hidden">
+            {mobileNavItems.map(({ href, label, icon: Icon }) => {
+              const isActive = pathname === href || pathname.startsWith(`${href}/`)
+              return (
+                <DropdownMenuItem
+                  key={href}
+                  onClick={() => router.push(href)}
+                  className={cn('cursor-pointer gap-2', isActive && 'bg-primary/10 font-bold text-primary')}
+                >
+                  <Icon className="h-4 w-4" />
+                  {label}
+                </DropdownMenuItem>
+              )
+            })}
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <DropdownMenu>
           <DropdownMenuTrigger className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
             <Avatar className="h-9 w-9 cursor-pointer ring-2 ring-white shadow-sm transition-opacity hover:opacity-80">
               <AvatarFallback className="text-xs bg-primary/10 text-primary font-black">{initials}</AvatarFallback>
@@ -63,7 +84,7 @@ export function Header({ userEmail }: HeaderProps) {
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => router.push('/settings')} className="cursor-pointer gap-2">
               <Settings className="h-4 w-4" />
-              Profile settings
+              Settings
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={signOut} className="text-destructive cursor-pointer gap-2">
@@ -73,28 +94,6 @@ export function Header({ userEmail }: HeaderProps) {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      <nav className="md:hidden overflow-x-auto border-t border-border/60 bg-white/55 px-3 py-2">
-        <div className="flex min-w-max gap-2">
-          {mobileNavItems.map(({ href, label, icon: Icon }) => {
-            const isActive = pathname === href || pathname.startsWith(`${href}/`)
-            return (
-              <Link
-                key={href}
-                href={href}
-                className={cn(
-                  'inline-flex h-10 items-center gap-2 rounded-full border px-3 text-xs font-bold transition-colors',
-                  isActive
-                    ? 'border-primary bg-primary text-primary-foreground shadow-sm'
-                    : 'border-border/70 bg-white/75 text-muted-foreground hover:text-foreground'
-                )}
-              >
-                <Icon className="h-3.5 w-3.5" />
-                {label}
-              </Link>
-            )
-          })}
-        </div>
-      </nav>
     </header>
   )
 }

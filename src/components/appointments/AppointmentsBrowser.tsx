@@ -122,7 +122,7 @@ export function AppointmentsBrowser({ upcoming, past, persons, familyId }: Appoi
       )}
 
       <Tabs defaultValue="upcoming">
-        <TabsList>
+        <TabsList className="h-auto w-full flex-wrap justify-start gap-1 sm:w-fit">
           <TabsTrigger value="upcoming">Upcoming ({filteredUpcoming.length})</TabsTrigger>
           <TabsTrigger value="past">Past ({filteredPast.length})</TabsTrigger>
         </TabsList>

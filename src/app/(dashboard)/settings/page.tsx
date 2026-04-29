@@ -22,6 +22,7 @@ interface AccessMember {
   user_id: string | null
   role: UserRole
   created_at: string
+  email?: string | null
 }
 
 export default function SettingsPage() {
@@ -72,7 +73,10 @@ export default function SettingsPage() {
             .eq('user_id', user!.id)
             .maybeSingle(),
         ])
-        setAccessMembers((membersResult.data ?? []) as AccessMember[])
+        setAccessMembers(((membersResult.data ?? []) as AccessMember[]).map((member) => ({
+          ...member,
+          email: member.user_id === user!.id ? user!.email ?? null : null,
+        })))
         setProfiles((profilesResult.data ?? []) as Person[])
         const preference = (preferenceResult.data ?? null) as UserNotificationPreference | null
         setNotificationPreference(preference)
@@ -384,14 +388,15 @@ export default function SettingsPage() {
                 {accessMembers.length > 0 ? (
                   accessMembers.map((member) => {
                     const linkedProfile = profiles.find((profile) => profile.user_id === member.user_id)
+                    const displayName = linkedProfile
+                      ? `${linkedProfile.first_name} ${linkedProfile.last_name ?? ''}`.trim()
+                      : member.email ?? 'Account pending'
                     return (
                       <div key={member.id} className="rounded-2xl border bg-white p-3">
                         <div className="flex items-center justify-between gap-3">
                           <div>
                             <p className="text-sm font-black">
-                              {linkedProfile
-                                ? `${linkedProfile.first_name} ${linkedProfile.last_name ?? ''}`
-                                : `Account ${member.user_id?.slice(0, 8) ?? 'pending'}`}
+                              {displayName}
                             </p>
                             <p className="mt-1 text-xs text-muted-foreground">
                               Joined {new Date(member.created_at).toLocaleDateString()}

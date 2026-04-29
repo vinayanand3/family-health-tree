@@ -2,22 +2,13 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { AppointmentsBrowser } from '@/components/appointments/AppointmentsBrowser'
 import { AppointmentReminderControls } from '@/components/appointments/AppointmentReminderControls'
+import { AppointmentCountdown } from '@/components/appointments/AppointmentCountdown'
 import { AddAppointmentTrigger } from '@/components/appointments/AddAppointmentTrigger'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Activity, BellRing, CalendarDays, MapPin, Stethoscope, TrendingUp, UserRound } from 'lucide-react'
 import { Appointment, Person } from '@/types'
-import { differenceInCalendarDays, format, formatDistanceToNow } from 'date-fns'
-
-function appointmentCategory(appointment: Appointment) {
-  const text = `${appointment.title} ${appointment.doctor_name ?? ''}`.toLowerCase()
-  if (text.includes('pediatric')) return 'Pediatric'
-  if (text.includes('dental') || text.includes('dentist')) return 'Dental'
-  if (text.includes('eye') || text.includes('vision') || text.includes('optom')) return 'Vision'
-  if (text.includes('cardio')) return 'Cardiology'
-  if (text.includes('derm')) return 'Dermatology'
-  if (text.includes('checkup') || text.includes('physical') || text.includes('annual')) return 'Checkup'
-  return 'General'
-}
+import { differenceInCalendarDays, format } from 'date-fns'
+import { appointmentCategory } from '@/lib/appointments'
 
 export default async function AppointmentsPage() {
   const supabase = await createClient()
@@ -54,8 +45,7 @@ export default async function AppointmentsPage() {
   )
   const persons = (personsResult.data ?? []) as Person[]
   const completedCheckups = ((appointmentsResult.data ?? []) as Appointment[]).filter((appointment) => {
-    const text = appointment.title.toLowerCase()
-    return appointment.is_completed && (text.includes('checkup') || text.includes('physical') || text.includes('annual'))
+    return appointment.is_completed && appointmentCategory(appointment) === 'Checkup'
   })
   const averageDaysSinceCheckup = completedCheckups.length > 0
     ? Math.round(
@@ -81,17 +71,17 @@ export default async function AppointmentsPage() {
     <div className="space-y-6">
       <div className="overflow-hidden rounded-[2rem] border border-white/80 bg-white/75 shadow-xl shadow-slate-900/10 backdrop-blur-xl">
         <div className="flex flex-col gap-4 p-5 sm:p-6 md:flex-row md:items-end md:justify-between">
-        <div>
+          <div>
             <p className="mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-primary">
               <CalendarDays className="h-3.5 w-3.5" />
               Care schedule
             </p>
-          <h1 className="text-3xl font-black">Appointments</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
+            <h1 className="text-3xl font-black">Appointments</h1>
+            <p className="mt-2 text-sm text-muted-foreground">
               {upcoming.length} upcoming · {past.length} past visits
             </p>
-        </div>
-        <AddAppointmentTrigger />
+          </div>
+          <AddAppointmentTrigger />
         </div>
       </div>
 
@@ -105,11 +95,7 @@ export default async function AppointmentsPage() {
               <div>
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="font-bold">Next appointment</p>
-                  <span className="rounded-full bg-white/75 px-2.5 py-1 text-xs font-bold text-primary">
-                    {differenceInCalendarDays(new Date(nextAppointment.appointment_date), new Date()) === 0
-                      ? 'Today'
-                      : formatDistanceToNow(new Date(nextAppointment.appointment_date), { addSuffix: true })}
-                  </span>
+                  <AppointmentCountdown appointmentDate={nextAppointment.appointment_date} />
                 </div>
                 <p className="mt-1 text-sm font-medium">{nextAppointment.title}</p>
                 <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
@@ -148,13 +134,13 @@ export default async function AppointmentsPage() {
           icon={Activity}
           title="Checkup recency"
           value={averageDaysSinceCheckup === null ? 'No completed checkups' : `${averageDaysSinceCheckup} days avg`}
-          copy="Based on completed appointments tagged as checkup, physical, or annual"
+          copy="Based on completed appointments typed or inferred as checkups"
         />
         <AnalyticsCard
           icon={Stethoscope}
           title="Care mix"
           value={topCategory ? topCategory[0] : 'No data yet'}
-          copy={topCategory ? `${topCategory[1]} visit${topCategory[1] === 1 ? '' : 's'} this year` : 'Doctor and title heuristics will fill this in'}
+          copy={topCategory ? `${topCategory[1]} visit${topCategory[1] === 1 ? '' : 's'} this year` : 'Appointment types will fill this in'}
         />
       </div>
 

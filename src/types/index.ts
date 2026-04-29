@@ -3,6 +3,7 @@ export type RelationshipType = 'parent' | 'child' | 'spouse' | 'sibling'
 export type ConditionStatus = 'active' | 'resolved' | 'chronic'
 export type AllergySeverity = 'mild' | 'moderate' | 'severe'
 export type VaccinationStatus = 'up_to_date' | 'due' | 'overdue' | 'scheduled'
+export type AppointmentType = 'checkup' | 'follow_up' | 'specialist' | 'dental' | 'vision' | 'pediatric' | 'urgent' | 'other'
 
 export interface Family {
   id: string
@@ -80,6 +81,7 @@ export interface Appointment {
   person_id: string
   family_id: string
   title: string
+  appointment_type: AppointmentType | null
   doctor_name: string | null
   location: string | null
   appointment_date: string

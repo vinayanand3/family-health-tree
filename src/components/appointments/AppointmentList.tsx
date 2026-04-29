@@ -8,7 +8,9 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { AppointmentForm } from '@/components/appointments/AppointmentForm'
 import { AppointmentReminderControls } from '@/components/appointments/AppointmentReminderControls'
+import { AppointmentCountdown } from '@/components/appointments/AppointmentCountdown'
 import { AppointmentFormData } from '@/lib/validations/appointment'
+import { appointmentCategory } from '@/lib/appointments'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import { differenceInCalendarDays, format, isPast } from 'date-fns'
@@ -33,6 +35,7 @@ function compactPayload(data: AppointmentFormData) {
   return {
     person_id: data.person_id,
     title: data.title,
+    appointment_type: data.appointment_type || null,
     doctor_name: data.doctor_name || null,
     location: data.location || null,
     appointment_date: data.appointment_date,
@@ -146,6 +149,10 @@ export function AppointmentList({ appointments, showPerson = false, persons = []
                 <div className="space-y-1.5 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-medium text-sm">{appt.title}</p>
+                    <Badge variant="outline" className="text-xs">
+                      {appointmentCategory(appt)}
+                    </Badge>
+                    <AppointmentCountdown appointmentDate={appt.appointment_date} isCompleted={appt.is_completed} />
                     {appt.is_completed && (
                       <Badge variant="secondary" className="text-xs bg-green-100 text-green-700">
                         Completed
@@ -209,6 +216,7 @@ export function AppointmentList({ appointments, showPerson = false, persons = []
                         defaultValues={{
                           person_id: appt.person_id,
                           title: appt.title,
+                          appointment_type: appt.appointment_type ?? undefined,
                           doctor_name: appt.doctor_name ?? '',
                           location: appt.location ?? '',
                           appointment_date: toDateTimeLocal(appt.appointment_date),
@@ -227,6 +235,7 @@ export function AppointmentList({ appointments, showPerson = false, persons = []
                   ) : (
                     <div className="grid gap-4 lg:grid-cols-[1fr_auto]">
                       <div className="space-y-3">
+                        <DetailRow label="Type" value={appointmentCategory(appt)} />
                         <DetailRow label="Doctor" value={appt.doctor_name} />
                         <DetailRow label="Location" value={appt.location} />
                         <DetailRow label="Notes" value={appt.notes} />

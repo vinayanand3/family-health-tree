@@ -4,6 +4,7 @@ import { HealthSummary } from '@/components/members/HealthSummary'
 import { MemberMetricsPanel } from '@/components/members/MemberMetricsPanel'
 import { VaccinationTracker } from '@/components/members/VaccinationTracker'
 import { AppointmentList } from '@/components/appointments/AppointmentList'
+import { AppointmentCountdown } from '@/components/appointments/AppointmentCountdown'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
@@ -205,7 +206,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
       </Card>
 
       <Tabs defaultValue="health">
-        <TabsList>
+        <TabsList className="h-auto w-full flex-wrap justify-start gap-1 sm:w-fit">
           <TabsTrigger value="health">Health Overview</TabsTrigger>
           <TabsTrigger value="vaccinations">Vaccinations ({vaccinations.length})</TabsTrigger>
           <TabsTrigger value="metrics">Metrics</TabsTrigger>
@@ -261,7 +262,10 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
               <CardContent>
                 {nextAppointment ? (
                   <div className="rounded-2xl bg-primary/10 p-4">
-                    <p className="text-sm font-black">Next appointment</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-sm font-black">Next appointment</p>
+                      <AppointmentCountdown appointmentDate={nextAppointment.appointment_date} />
+                    </div>
                     <p className="mt-1 text-sm text-muted-foreground">{nextAppointment.title}</p>
                     <p className="mt-2 text-xs font-bold text-primary">
                       {format(new Date(nextAppointment.appointment_date), 'PPp')}

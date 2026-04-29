@@ -4,7 +4,8 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { appointmentSchema, AppointmentFormData } from '@/lib/validations/appointment'
-import { Person } from '@/types'
+import { AppointmentType, Person } from '@/types'
+import { APPOINTMENT_TYPES, appointmentTypeLabel } from '@/lib/appointments'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -33,6 +34,7 @@ export function AppointmentForm({
   includeOutcomeFields = false,
 }: AppointmentFormProps) {
   const [selectedPersonId, setSelectedPersonId] = useState(defaultValues?.person_id ?? defaultPersonId ?? '')
+  const [selectedType, setSelectedType] = useState<AppointmentType | ''>(defaultValues?.appointment_type ?? '')
   const { register, handleSubmit, setValue, formState: { errors } } = useForm<AppointmentFormData>({
     resolver: zodResolver(appointmentSchema),
     defaultValues: { person_id: defaultPersonId ?? '', ...defaultValues },
@@ -77,21 +79,47 @@ export function AppointmentForm({
         {errors.title && <p className="text-xs text-destructive">{errors.title.message}</p>}
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label>Type</Label>
+          <Select
+            value={selectedType || undefined}
+            onValueChange={(value: string | null) => {
+              const type = (value ?? undefined) as AppointmentType | undefined
+              setSelectedType(type ?? '')
+              setValue('appointment_type', type)
+            }}
+          >
+            <SelectTrigger className="w-full">
+              <span className={selectedType ? 'text-sm' : 'text-sm text-muted-foreground'}>
+                {selectedType ? appointmentTypeLabel(selectedType) : 'Select type'}
+              </span>
+            </SelectTrigger>
+            <SelectContent>
+              {APPOINTMENT_TYPES.map((type) => (
+                <SelectItem key={type.value} value={type.value}>
+                  {type.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <div className="space-y-1.5">
           <Label>Doctor / Specialist</Label>
           <Input {...register('doctor_name')} placeholder="Dr. Smith" />
         </div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label>Location</Label>
           <Input {...register('location')} placeholder="City Hospital" />
         </div>
-      </div>
-
-      <div className="space-y-1.5">
-        <Label>Date & Time</Label>
-        <Input type="datetime-local" {...register('appointment_date')} />
-        {errors.appointment_date && <p className="text-xs text-destructive">{errors.appointment_date.message}</p>}
+        <div className="space-y-1.5">
+          <Label>Date & Time</Label>
+          <Input type="datetime-local" {...register('appointment_date')} />
+          {errors.appointment_date && <p className="text-xs text-destructive">{errors.appointment_date.message}</p>}
+        </div>
       </div>
 
       <div className="space-y-1.5">

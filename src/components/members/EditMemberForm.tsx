@@ -72,7 +72,7 @@ export function EditMemberForm({ person }: EditMemberFormProps) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label>First Name *</Label>
           <Input {...register('first_name')} placeholder="Jane" />
@@ -84,7 +84,7 @@ export function EditMemberForm({ person }: EditMemberFormProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label>Date of Birth</Label>
           <Input type="date" {...register('date_of_birth')} />

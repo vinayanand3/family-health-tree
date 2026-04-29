@@ -123,6 +123,7 @@
   }
   body {
     @apply bg-background text-foreground;
+    overflow-x: hidden;
     background:
       radial-gradient(circle at 12% 12%, color-mix(in oklch, var(--secondary), transparent 34%) 0, transparent 34rem),
       radial-gradient(circle at 88% 4%, color-mix(in oklch, var(--accent), transparent 42%) 0, transparent 30rem),
@@ -130,6 +131,7 @@
   }
   html {
     @apply font-sans;
+    overflow-x: hidden;
   }
   h1,
   h2,

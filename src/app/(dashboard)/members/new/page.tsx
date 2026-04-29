@@ -124,7 +124,7 @@ export default function NewMemberPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label>First Name *</Label>
                 <Input {...register('first_name')} placeholder="Jane" />
@@ -136,7 +136,7 @@ export default function NewMemberPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label>Date of Birth</Label>
                 <Input type="date" {...register('date_of_birth')} />
@@ -168,11 +168,11 @@ export default function NewMemberPage() {
             />
 
             {persons.length > 0 && (
-              <div className="space-y-3 rounded-xl border bg-muted/20 p-3">
+              <div className="space-y-3 rounded-2xl border border-primary/20 bg-primary/5 p-4">
                 <div>
-                  <p className="text-sm font-bold">Relationship</p>
+                  <p className="text-sm font-bold">Connect to family tree</p>
                   <p className="text-xs text-muted-foreground">
-                    Optional, but this is what makes the tree connect people.
+                    Choose how this new member connects to someone already in your family.
                   </p>
                 </div>
 

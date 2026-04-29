@@ -2,13 +2,14 @@ import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { AppointmentList } from '@/components/appointments/AppointmentList'
 import { AppointmentReminderControls } from '@/components/appointments/AppointmentReminderControls'
+import { AppointmentCountdown } from '@/components/appointments/AppointmentCountdown'
 import { buttonVariants } from '@/components/ui/button'
 import { EmptyStateIllustration } from '@/components/ui/EmptyStateIllustration'
 import { Users, CalendarDays, Activity, AlertTriangle, ArrowRight, BellRing, MapPin, UserRound, TreePine, Plus, UserPlus, Pill, ShieldCheck, TrendingUp } from 'lucide-react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { Appointment } from '@/types'
-import { differenceInCalendarDays, format, formatDistanceToNow } from 'date-fns'
+import { format } from 'date-fns'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -42,7 +43,7 @@ export default async function DashboardPage() {
       .limit(5),
     supabase
       .from('appointments')
-      .select('id, person_id, appointment_date, is_completed, follow_up_needed, follow_up_date, doctor_name, title')
+      .select('id, person_id, appointment_date, appointment_type, is_completed, follow_up_needed, follow_up_date, doctor_name, title')
       .eq('family_id', familyId),
     supabase
       .from('family_members')
@@ -127,11 +128,11 @@ export default async function DashboardPage() {
     }
   })
   const careLoadTrend = [
-    { label: 'Overdue vaccines', value: overdueVaccinations.length },
-    { label: 'Overdue visits', value: overdueAppointments },
-    { label: 'Follow-ups', value: overdueFollowUps },
-    { label: 'Refills', value: refillsDueSoon.length },
-    { label: 'Active conditions', value: activeConditionCount },
+    { label: 'Vacc', fullLabel: 'Overdue vaccines', value: overdueVaccinations.length },
+    { label: 'Visits', fullLabel: 'Overdue visits', value: overdueAppointments },
+    { label: 'Follow', fullLabel: 'Overdue follow-ups', value: overdueFollowUps },
+    { label: 'Refills', fullLabel: 'Refills due soon', value: refillsDueSoon.length },
+    { label: 'Cond', fullLabel: 'Active conditions', value: activeConditionCount },
   ]
   const lastMonthAppointments = allAppointments.filter((appointment) => {
     const date = new Date(appointment.appointment_date)
@@ -247,6 +248,14 @@ export default async function DashboardPage() {
           title="Family Health Score"
           value={`${familyHealthScore}`}
           copy={`${overdueVaccinations.length} overdue vaccines, ${refillsDueSoon.length} refills soon`}
+          details={[
+            `${overdueVaccinations.length} overdue vaccines`,
+            `${overdueAppointments} overdue appointments`,
+            `${overdueFollowUps} overdue follow-ups`,
+            `${refillsDueSoon.length} refills due soon`,
+            `${activeConditionCount} active conditions`,
+            `${missingRecentCheckups} missing recent checkups`,
+          ]}
         />
         <MetricCard
           href={nextAction === 'Invite a family member' ? '/settings' : '/appointments'}
@@ -271,7 +280,7 @@ export default async function DashboardPage() {
         />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="hidden gap-4 lg:grid lg:grid-cols-2">
         <ChartCard
           title="Appointment Trend"
           copy="Last six months of scheduled care"
@@ -286,7 +295,25 @@ export default async function DashboardPage() {
         />
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <details className="rounded-3xl border border-white/70 bg-white/70 p-4 shadow-sm backdrop-blur lg:hidden">
+        <summary className="cursor-pointer text-sm font-black">Show dashboard charts</summary>
+        <div className="mt-4 grid gap-4">
+          <ChartCard
+            title="Appointment Trend"
+            copy="Last six months of scheduled care"
+            data={monthlyAppointmentTrend}
+            tone="primary"
+          />
+          <ChartCard
+            title="Care Load"
+            copy="Open care items influencing the health score"
+            data={careLoadTrend}
+            tone="rose"
+          />
+        </div>
+      </details>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
         <Link href="/members" aria-label="View all family members">
           <Card className="group h-full cursor-pointer bg-white/80 transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-slate-900/10">
             <CardHeader className="pb-2">
@@ -386,11 +413,7 @@ export default async function DashboardPage() {
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="font-bold">Upcoming appointment alert</p>
-                    <span className="rounded-full bg-white/75 px-2.5 py-1 text-xs font-bold text-primary">
-                      {differenceInCalendarDays(new Date(nextAppointment.appointment_date), new Date()) === 0
-                        ? 'Today'
-                        : formatDistanceToNow(new Date(nextAppointment.appointment_date), { addSuffix: true })}
-                    </span>
+                    <AppointmentCountdown appointmentDate={nextAppointment.appointment_date} />
                   </div>
                   <p className="mt-1 text-sm font-medium">{nextAppointment.title}</p>
                   <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
@@ -425,7 +448,18 @@ export default async function DashboardPage() {
       )}
 
       {/* Upcoming appointments */}
-      <div>
+      <details className="rounded-3xl border border-white/70 bg-white/70 p-4 shadow-sm backdrop-blur md:hidden">
+        <summary className="cursor-pointer text-sm font-black">Show more upcoming appointments</summary>
+        <div className="mt-4">
+          {appointmentListItems.length > 0 ? (
+            <AppointmentList appointments={appointmentListItems} showPerson />
+          ) : (
+            <p className="text-sm text-muted-foreground">No other appointments scheduled.</p>
+          )}
+        </div>
+      </details>
+
+      <div className="hidden md:block">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-semibold">More Upcoming Appointments</h2>
           <Link href="/appointments" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
@@ -482,25 +516,39 @@ function MetricCard({
   title,
   value,
   copy,
+  details,
 }: {
   href: string
   icon: typeof ShieldCheck
   title: string
   value: string
   copy: string
+  details?: string[]
 }) {
   return (
-    <Link href={href} className="group rounded-3xl border border-white/70 bg-white/75 p-4 shadow-sm backdrop-blur transition-all hover:-translate-y-1 hover:bg-white hover:shadow-xl hover:shadow-slate-900/10">
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <div className="grid size-10 place-items-center rounded-2xl bg-primary/10 text-primary">
-          <Icon className="h-5 w-5" />
+    <div className="group rounded-3xl border border-white/70 bg-white/75 p-4 shadow-sm backdrop-blur transition-all hover:-translate-y-1 hover:bg-white hover:shadow-xl hover:shadow-slate-900/10">
+      <Link href={href}>
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <div className="grid size-10 place-items-center rounded-2xl bg-primary/10 text-primary">
+            <Icon className="h-5 w-5" />
+          </div>
+          <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
         </div>
-        <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-      </div>
-      <p className="text-xs font-black uppercase tracking-[0.14em] text-muted-foreground">{title}</p>
-      <p className="mt-2 text-lg font-black leading-tight">{value}</p>
-      <p className="mt-1 text-xs leading-5 text-muted-foreground">{copy}</p>
-    </Link>
+        <p className="text-xs font-black uppercase tracking-[0.14em] text-muted-foreground">{title}</p>
+        <p className="mt-2 text-lg font-black leading-tight">{value}</p>
+        <p className="mt-1 text-xs leading-5 text-muted-foreground">{copy}</p>
+      </Link>
+      {details && (
+        <details className="mt-3 border-t pt-3 text-xs text-muted-foreground">
+          <summary className="cursor-pointer font-black text-foreground">How score works</summary>
+          <ul className="mt-2 space-y-1">
+            {details.map((detail) => (
+              <li key={detail}>{detail}</li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </div>
   )
 }
 
@@ -512,7 +560,7 @@ function ChartCard({
 }: {
   title: string
   copy: string
-  data: { label: string; value: number }[]
+  data: { label: string; value: number; fullLabel?: string }[]
   tone: 'primary' | 'rose'
 }) {
   const maxValue = Math.max(1, ...data.map((item) => item.value))
@@ -530,7 +578,7 @@ function ChartCard({
         <p className="text-sm text-muted-foreground">{copy}</p>
       </CardHeader>
       <CardContent>
-        <svg viewBox="0 0 100 92" className="h-32 w-full overflow-visible" role="img" aria-label={title}>
+        <svg viewBox="0 0 100 84" className="h-28 w-full overflow-visible" role="img" aria-label={title}>
           <polyline
             points={points}
             fill="none"
@@ -545,18 +593,18 @@ function ChartCard({
             return (
               <g key={item.label}>
                 <circle cx={x} cy={y} r="3" fill={stroke} />
-                <text x={x} y="91" textAnchor="middle" className="fill-slate-500 text-[6px] font-bold">
-                  {item.label}
-                </text>
+                <title>{`${item.fullLabel ?? item.label}: ${item.value}`}</title>
               </g>
             )
           })}
         </svg>
         <div className="mt-3 grid gap-2 sm:grid-cols-3">
-          {data.slice(-3).map((item) => (
+          {data.map((item) => (
             <div key={item.label} className="rounded-2xl border bg-white/75 p-2 text-center">
               <p className="text-sm font-black">{item.value}</p>
-              <p className="text-[11px] font-bold text-muted-foreground">{item.label}</p>
+              <p className="break-words text-[11px] font-bold leading-tight text-muted-foreground">
+                {item.fullLabel ?? item.label}
+              </p>
             </div>
           ))}
         </div>
