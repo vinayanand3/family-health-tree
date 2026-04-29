@@ -5,7 +5,7 @@ import { Person, Relationship } from '@/types'
 import { buttonVariants } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
-import { GitFork, Plus, Users } from 'lucide-react'
+import { CalendarDays, GitFork, Plus, Sparkles, Users } from 'lucide-react'
 
 function getAgeLabel(dateOfBirth: string | null) {
   if (!dateOfBirth) return 'Age unknown'
@@ -152,36 +152,95 @@ export default async function TreePage() {
   const parentLinks = relationships.filter(
     (r) => r.relationship_type === 'parent'
   ).length
+  const activeConditionCount = personNodes.reduce(
+    (sum, person) => sum + person.activeConditions,
+    0
+  )
+  const hereditaryRiskCount = personNodes.reduce(
+    (sum, person) => sum + person.hereditaryConditions,
+    0
+  )
+  const upcomingVisitCount = personNodes.reduce(
+    (sum, person) => sum + person.upcomingAppointments.length,
+    0
+  )
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col gap-4 rounded-3xl border border-border/70 bg-white/70 p-6 shadow-sm backdrop-blur md:flex-row md:items-end md:justify-between">
-        <div>
-          <div className="mb-3 flex flex-wrap gap-2">
-            <Badge variant="secondary" className="gap-1">
-              <Users className="h-3 w-3" />
-              {persons.length} members
-            </Badge>
-            <Badge variant="outline" className="gap-1 bg-white">
-              <GitFork className="h-3 w-3" />
-              {parentLinks} family links
-            </Badge>
+      <div className="overflow-hidden rounded-[2rem] border border-white/80 bg-white/75 shadow-2xl shadow-slate-900/10 backdrop-blur-xl">
+        <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[1fr_auto] lg:items-end">
+          <div>
+            <div className="mb-4 flex flex-wrap gap-2">
+              <Badge variant="secondary" className="gap-1 rounded-full px-3 py-1">
+                <Users className="h-3 w-3" />
+                {persons.length} members
+              </Badge>
+              <Badge variant="outline" className="gap-1 rounded-full bg-white px-3 py-1">
+                <GitFork className="h-3 w-3" />
+                {parentLinks} family links
+              </Badge>
+              <Badge variant="outline" className="gap-1 rounded-full bg-white px-3 py-1">
+                <CalendarDays className="h-3 w-3" />
+                {upcomingVisitCount} upcoming visits
+              </Badge>
+            </div>
+            <p className="mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-primary">
+              <Sparkles className="h-3.5 w-3.5" />
+              Family care map
+            </p>
+            <h1 className="max-w-3xl text-3xl font-black leading-tight sm:text-5xl">
+              Your family tree, health context included.
+            </h1>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
+              Pan, zoom, and click any profile card to open that person&apos;s health record.
+              Hover on desktop to preview care details without leaving the tree.
+            </p>
           </div>
-          <h1 className="text-3xl font-black">Family Tree</h1>
-          <p className="text-sm text-muted-foreground">
-            Pan, zoom, and click any profile card to open that person&apos;s
-            health record.
-          </p>
+
+          <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
+            <Link href="/members/new" className={buttonVariants({ size: 'lg' })}>
+              <Plus className="h-4 w-4" />
+              Add Member
+            </Link>
+            <Link
+              href="/members"
+              className={buttonVariants({ variant: 'outline', size: 'lg' })}
+            >
+              <Users className="h-4 w-4" />
+              View Members
+            </Link>
+          </div>
         </div>
-        <Link href="/members/new" className={buttonVariants({ size: 'lg' })}>
-          <Plus className="h-4 w-4" />
-          Add Member
+
+        <div className="grid border-t border-slate-100 bg-white/45 sm:grid-cols-3">
+          <CareSignal label="Active conditions" value={activeConditionCount} tone="amber" />
+          <CareSignal label="Hereditary risks" value={hereditaryRiskCount} tone="rose" />
+          <CareSignal label="Upcoming visits" value={upcomingVisitCount} tone="blue" />
+        </div>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Link href="/dashboard" className="rounded-2xl border border-white/70 bg-white/65 p-4 text-sm font-bold shadow-sm backdrop-blur transition-colors hover:bg-white">
+          Back to home
+        </Link>
+        <Link href="/appointments" className="rounded-2xl border border-white/70 bg-white/65 p-4 text-sm font-bold shadow-sm backdrop-blur transition-colors hover:bg-white">
+          Review appointments
+        </Link>
+        <Link href="/settings" className="rounded-2xl border border-white/70 bg-white/65 p-4 text-sm font-bold shadow-sm backdrop-blur transition-colors hover:bg-white">
+          Family settings
         </Link>
       </div>
 
       {persons.length === 0 ? (
-        <div className="rounded-lg border bg-muted/20 py-20 text-center">
-          <p className="mb-4 text-muted-foreground">No family members yet.</p>
+        <div className="rounded-[2rem] border border-dashed border-border bg-white/65 py-20 text-center shadow-sm backdrop-blur">
+          <div className="mb-3 flex flex-wrap gap-2">
+            <Badge variant="secondary" className="mx-auto gap-1">
+              Family tree is ready
+            </Badge>
+          </div>
+          <p className="mb-4 text-muted-foreground">
+            Add your first family member to start mapping relationships and health records.
+          </p>
           <Link href="/members/new" className={buttonVariants({})}>
             Add your first member
           </Link>
@@ -194,6 +253,38 @@ export default async function TreePage() {
           relationshipCount={relationships.length}
         />
       )}
+    </div>
+  )
+}
+
+function CareSignal({
+  label,
+  value,
+  tone,
+}: {
+  label: string
+  value: number
+  tone: 'amber' | 'rose' | 'blue'
+}) {
+  const tones = {
+    amber: 'bg-amber-50 text-amber-700',
+    rose: 'bg-rose-50 text-rose-700',
+    blue: 'bg-blue-50 text-blue-700',
+  }
+
+  return (
+    <div className="border-t border-slate-100 p-4 first:border-t-0 sm:border-l sm:border-t-0 sm:first:border-l-0">
+      <p className="text-xs font-black uppercase tracking-[0.16em] text-muted-foreground">
+        {label}
+      </p>
+      <div className="mt-2 flex items-center gap-3">
+        <span className={`grid size-10 place-items-center rounded-2xl text-lg font-black ${tones[tone]}`}>
+          {value}
+        </span>
+        <p className="text-sm font-semibold text-slate-600">
+          {value === 0 ? 'Nothing flagged right now' : 'Needs family visibility'}
+        </p>
+      </div>
     </div>
   )
 }

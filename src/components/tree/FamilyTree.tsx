@@ -18,7 +18,7 @@ import {
 import '@xyflow/react/dist/style.css'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { CalendarDays, GitFork } from 'lucide-react'
+import { Activity, CalendarDays, GitFork, Pill, ShieldAlert, Sparkles } from 'lucide-react'
 import { Relationship } from '@/types'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -41,6 +41,7 @@ export type PersonNodeData = {
     doctorName: string | null
     location: string | null
   }[]
+  onPreviewChange?: (person: PersonNodeData | null) => void
   [key: string]: unknown
 }
 
@@ -103,8 +104,14 @@ function PersonNode({ data }: NodeProps<PersonFlowNode>) {
   return (
     <div
       className="nodrag nopan"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      onMouseEnter={() => {
+        setHovered(true)
+        data.onPreviewChange?.(data)
+      }}
+      onMouseLeave={() => {
+        setHovered(false)
+        data.onPreviewChange?.(null)
+      }}
       style={{
         position: 'relative',
         display: 'flex',
@@ -170,107 +177,6 @@ function PersonNode({ data }: NodeProps<PersonFlowNode>) {
         position={Position.Left}
         style={{ background: '#e2e8f0', border: '2px solid white', width: 8, height: 8, top: '78%' }}
       />
-
-      {/* Hover tooltip */}
-      {hovered && (
-        <div
-          style={{
-            position: 'absolute',
-            bottom: '100%',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            marginBottom: 12,
-            width: 210,
-            background: 'white',
-            borderRadius: 16,
-            border: '1px solid #f1f5f9',
-            boxShadow: '0 12px 40px -8px rgba(0,0,0,0.18), 0 4px 16px -4px rgba(0,0,0,0.08)',
-            padding: '12px 14px',
-            zIndex: 100,
-            pointerEvents: 'none',
-          }}
-        >
-          {/* Header */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-            {/* Mini avatar */}
-            <div style={{
-              width: 36, height: 36, borderRadius: '50%',
-              border: `2px solid ${ringColor}`,
-              overflow: 'hidden', flexShrink: 0,
-              background: bg, display: 'flex', alignItems: 'center',
-              justifyContent: 'center', fontSize: 13, fontWeight: 900, color: fg,
-            }}>
-              {data.photoUrl ? (
-                <img src={data.photoUrl} alt={data.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              ) : data.initials}
-            </div>
-            <div>
-              <p style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', lineHeight: 1.2 }}>{data.name}</p>
-              {data.age && <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 1 }}>{data.age}</p>}
-            </div>
-          </div>
-
-          {/* Divider */}
-          <div style={{ height: 1, background: '#f1f5f9', marginBottom: 8 }} />
-
-          {/* Health rows */}
-          {HEALTH_ITEMS.filter(({ key }) => (data[key] as number) > 0).map(({ key, color, singular }) => {
-            const count = data[key] as number
-            return (
-              <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
-                <span style={{ width: 7, height: 7, borderRadius: '50%', background: color, flexShrink: 0 }} />
-                <span style={{ fontSize: 12, color: '#475569' }}>
-                  {count} {singular}{count !== 1 ? (singular.endsWith('y') ? 'ies' : 's') : ''}
-                </span>
-              </div>
-            )
-          })}
-          {!hasHealth && (
-            <p style={{ fontSize: 12, color: '#10b981', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span>✓</span> No health concerns recorded
-            </p>
-          )}
-
-          {data.gender && (
-            <div style={{ marginTop: 7, fontSize: 11, color: '#64748b' }}>
-              Gender: <span style={{ color: '#0f172a', fontWeight: 700, textTransform: 'capitalize' }}>{data.gender}</span>
-            </div>
-          )}
-
-          <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid #f1f5f9' }}>
-            <p style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, fontSize: 11, fontWeight: 800, color: '#0f172a' }}>
-              <CalendarDays style={{ width: 12, height: 12, color: '#e11d48' }} />
-              Upcoming appointments
-            </p>
-            {data.upcomingAppointments.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {data.upcomingAppointments.slice(0, 3).map((appointment) => (
-                  <div key={appointment.id} style={{ borderRadius: 10, background: '#fff7ed', padding: '7px 8px' }}>
-                    <p style={{ fontSize: 11, fontWeight: 800, color: '#0f172a', lineHeight: 1.25 }}>
-                      {appointment.title}
-                    </p>
-                    <p style={{ marginTop: 2, fontSize: 10, color: '#64748b', lineHeight: 1.25 }}>
-                      {formatAppointmentDate(appointment.appointmentDate)}
-                      {appointment.doctorName ? ` · ${appointment.doctorName}` : ''}
-                    </p>
-                    {appointment.location && (
-                      <p style={{ marginTop: 1, fontSize: 10, color: '#94a3b8', lineHeight: 1.25 }}>
-                        {appointment.location}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p style={{ fontSize: 11, color: '#94a3b8' }}>No upcoming appointments</p>
-            )}
-          </div>
-
-          <div style={{ marginTop: 8, paddingTop: 7, borderTop: '1px solid #f1f5f9', fontSize: 10, color: '#94a3b8' }}>
-            Click to open full health profile →
-          </div>
-        </div>
-      )}
 
       {/* ── Photo circle ────────────────────────────────── */}
       <div
@@ -388,6 +294,124 @@ function PersonNode({ data }: NodeProps<PersonFlowNode>) {
 }
 
 const nodeTypes = { person: PersonNode }
+
+function HealthPreviewPanel({ person }: { person: PersonNodeData | null }) {
+  if (!person) {
+    return (
+      <div className="pointer-events-none absolute right-4 top-4 z-20 hidden w-[300px] rounded-2xl border border-white/80 bg-white/85 p-4 shadow-xl shadow-slate-900/10 backdrop-blur-xl lg:block">
+        <div className="mb-3 flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-slate-400">
+          <Sparkles className="h-3.5 w-3.5 text-rose-500" />
+          Live preview
+        </div>
+        <p className="text-sm font-black text-slate-900">Hover a family member</p>
+        <p className="mt-1 text-xs leading-5 text-slate-500">
+          Health markers, care notes, and upcoming visits appear here without covering the tree.
+        </p>
+      </div>
+    )
+  }
+
+  const status = healthStatus(person)
+  const ringColor = STATUS_RING[status]
+  const { bg, fg } = STATUS_AVATAR[status]
+  const hasHealth =
+    person.activeConditions > 0 ||
+    person.hereditaryConditions > 0 ||
+    person.medicationCount > 0 ||
+    person.allergyCount > 0
+
+  return (
+    <div className="pointer-events-none absolute right-4 top-4 z-20 hidden w-[320px] rounded-2xl border border-white/80 bg-white/90 p-4 shadow-2xl shadow-slate-900/15 backdrop-blur-xl lg:block">
+      <div className="flex items-start gap-3">
+        <div
+          className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-full text-sm font-black"
+          style={{ border: `2px solid ${ringColor}`, background: bg, color: fg }}
+        >
+          {person.photoUrl ? (
+            <img src={person.photoUrl} alt={person.name} className="h-full w-full object-cover" />
+          ) : (
+            person.initials
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-black text-slate-950">{person.name}</p>
+          <p className="mt-0.5 text-xs font-semibold text-slate-500">{person.age}</p>
+          {person.gender && (
+            <p className="mt-1 text-[11px] font-bold capitalize text-slate-400">{person.gender}</p>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        <PreviewMetric icon={Activity} label="Conditions" value={person.activeConditions} color="#f59e0b" />
+        <PreviewMetric icon={ShieldAlert} label="Risks" value={person.hereditaryConditions} color="#f43f5e" />
+        <PreviewMetric icon={Pill} label="Meds" value={person.medicationCount} color="#3b82f6" />
+        <PreviewMetric icon={Sparkles} label="Allergies" value={person.allergyCount} color="#a855f7" />
+      </div>
+
+      {!hasHealth && (
+        <div className="mt-3 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700">
+          No health concerns recorded
+        </div>
+      )}
+
+      <div className="mt-4 border-t border-slate-100 pt-3">
+        <p className="mb-2 flex items-center gap-2 text-xs font-black text-slate-900">
+          <CalendarDays className="h-3.5 w-3.5 text-rose-600" />
+          Upcoming visits
+        </p>
+        {person.upcomingAppointments.length > 0 ? (
+          <div className="space-y-2">
+            {person.upcomingAppointments.slice(0, 3).map((appointment) => (
+              <div key={appointment.id} className="rounded-xl bg-orange-50 px-3 py-2">
+                <p className="line-clamp-2 text-xs font-black leading-4 text-slate-900">
+                  {appointment.title}
+                </p>
+                <p className="mt-1 text-[11px] font-semibold leading-4 text-slate-500">
+                  {formatAppointmentDate(appointment.appointmentDate)}
+                  {appointment.doctorName ? ` · ${appointment.doctorName}` : ''}
+                </p>
+                {appointment.location && (
+                  <p className="mt-0.5 truncate text-[11px] text-slate-400">{appointment.location}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="rounded-xl bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-500">
+            No upcoming appointments
+          </p>
+        )}
+      </div>
+
+      <div className="mt-3 border-t border-slate-100 pt-3 text-[11px] font-bold text-slate-400">
+        Click the card to open the full profile
+      </div>
+    </div>
+  )
+}
+
+function PreviewMetric({
+  icon: Icon,
+  label,
+  value,
+  color,
+}: {
+  icon: typeof Activity
+  label: string
+  value: number
+  color: string
+}) {
+  return (
+    <div className="rounded-xl border border-slate-100 bg-white px-3 py-2 shadow-sm">
+      <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold text-slate-500">
+        <Icon className="h-3 w-3" style={{ color }} />
+        {label}
+      </div>
+      <p className="text-lg font-black leading-none text-slate-950">{value}</p>
+    </div>
+  )
+}
 
 // ─── Layout ───────────────────────────────────────────────────────────────────
 
@@ -521,7 +545,11 @@ const RELATION_LABEL_BG = {
   strokeWidth: 1,
 } as const
 
-function buildFlowElements(persons: PersonNodeData[], relationships: Relationship[]) {
+function buildFlowElements(
+  persons: PersonNodeData[],
+  relationships: Relationship[],
+  onPreviewChange?: (person: PersonNodeData | null) => void
+) {
   if (persons.length === 0) return { nodes: [] as Node[], edges: [] as Edge[] }
 
   const { positions, parentToChildren, spousePairs, siblingPairs } = computeLayout(persons, relationships)
@@ -530,7 +558,7 @@ function buildFlowElements(persons: PersonNodeData[], relationships: Relationshi
     id: p.personId,
     type: 'person' as const,
     position: positions[p.personId] ?? { x: 0, y: 0 },
-    data: p,
+    data: { ...p, onPreviewChange },
   }))
 
   const edges: Edge[] = []
@@ -633,52 +661,46 @@ export function FamilyTree({
   relationshipCount,
 }: FamilyTreeProps) {
   const router = useRouter()
+  const [previewPerson, setPreviewPerson] = useState<PersonNodeData | null>(null)
   const { nodes: initNodes, edges: initEdges } = useMemo(
-    () => buildFlowElements(persons, relationships),
+    () => buildFlowElements(persons, relationships, setPreviewPerson),
     [persons, relationships]
   )
 
   const [nodes, , onNodesChange] = useNodesState(initNodes)
   const [edges, , onEdgesChange] = useEdgesState(initEdges)
+  const activeConditionCount = persons.reduce((sum, person) => sum + person.activeConditions, 0)
+  const hereditaryRiskCount = persons.reduce((sum, person) => sum + person.hereditaryConditions, 0)
+  const appointmentCount = persons.reduce((sum, person) => sum + person.upcomingAppointments.length, 0)
 
   return (
-    <div
-      style={{ borderRadius: 24, overflow: 'hidden', border: '1px solid #e8edf3', boxShadow: '0 2px 16px rgba(0,0,0,0.06)', background: 'white' }}
-    >
+    <div className="overflow-hidden rounded-[2rem] border border-white/80 bg-white/75 shadow-2xl shadow-slate-900/10 backdrop-blur-xl">
       {/* Header */}
-      <div
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 12,
-          padding: '14px 20px',
-          borderBottom: '1px solid #f1f5f9',
-          background: 'white',
-        }}
-      >
-        <div>
-          <p style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 800, color: '#0f172a', margin: 0 }}>
-            <GitFork style={{ width: 15, height: 15, color: '#e11d48' }} />
-            Living relationship tree
-          </p>
-          <p style={{ fontSize: 11, color: '#94a3b8', margin: '2px 0 0' }}>
-            {memberCount} members · {relationshipCount} connections · Hover a card for health info · Click to open profile
-          </p>
+      <div className="border-b border-slate-100 bg-white/85 px-4 py-4 sm:px-5">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div>
+            <p className="flex items-center gap-2 text-sm font-black text-slate-950">
+              <GitFork className="h-4 w-4 text-rose-600" />
+              Living relationship tree
+            </p>
+            <p className="mt-1 text-xs font-medium text-slate-500">
+              {memberCount} members · {relationshipCount} connections · Hover a card for care details · Click to open profile
+            </p>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap">
+            <TreeStat label="Active" value={activeConditionCount} color="#f59e0b" />
+            <TreeStat label="Risks" value={hereditaryRiskCount} color="#f43f5e" />
+            <TreeStat label="Visits" value={appointmentCount} color="#3b82f6" />
+          </div>
         </div>
 
         {/* Legend */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
           {HEALTH_LEGEND.map(({ color, label }) => (
             <span
               key={label}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                padding: '4px 11px', borderRadius: 20,
-                border: '1px solid #f1f5f9', background: '#fafafa',
-                fontSize: 11, fontWeight: 600, color: '#64748b',
-              }}
+              className="flex shrink-0 items-center gap-2 rounded-full border border-slate-100 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-500"
             >
               <span style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} />
               {label}
@@ -687,12 +709,7 @@ export function FamilyTree({
           {RELATION_LEGEND.map(({ color, label, dash }) => (
             <span
               key={label}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 7,
-                padding: '4px 11px', borderRadius: 20,
-                border: '1px solid #f1f5f9', background: '#fffaf2',
-                fontSize: 11, fontWeight: 700, color: '#64748b',
-              }}
+              className="flex shrink-0 items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-3 py-1.5 text-xs font-bold text-slate-500"
             >
               <span
                 style={{
@@ -711,7 +728,8 @@ export function FamilyTree({
       </div>
 
       {/* Canvas */}
-      <div style={{ height: '72vh', minHeight: 640 }}>
+      <div className="relative h-[72vh] min-h-[520px] sm:min-h-[640px]">
+        <HealthPreviewPanel person={previewPerson} />
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -719,7 +737,7 @@ export function FamilyTree({
           onEdgesChange={onEdgesChange}
           nodeTypes={nodeTypes}
           fitView
-          fitViewOptions={{ padding: 0.28, maxZoom: 1.1 }}
+          fitViewOptions={{ padding: 0.32, maxZoom: 1.08 }}
           minZoom={0.15}
           maxZoom={2.5}
           proOptions={{ hideAttribution: true }}
@@ -727,7 +745,8 @@ export function FamilyTree({
           nodesConnectable={false}
           elementsSelectable={false}
           onNodeClick={(_, node) => router.push(`/members/${(node.data as PersonNodeData).personId}`)}
-          style={{ background: 'radial-gradient(circle at 50% 12%, #fffaf1 0%, #f6fff9 32%, #f8f5f0 72%, #f2ede8 100%)' }}
+          onPaneMouseEnter={() => setPreviewPerson(null)}
+          style={{ background: 'radial-gradient(circle at 50% 8%, #fff7ed 0%, #f8fffb 34%, #f8fafc 72%, #f3f4f6 100%)' }}
         >
           <Background variant={BackgroundVariant.Dots} gap={22} size={1} color="#e8e0d8" />
           <Controls position="bottom-right" showInteractive={false} />
@@ -739,6 +758,18 @@ export function FamilyTree({
             style={{ border: '1px solid #e8edf3', borderRadius: 12, background: 'white' }}
           />
         </ReactFlow>
+      </div>
+    </div>
+  )
+}
+
+function TreeStat({ label, value, color }: { label: string; value: number; color: string }) {
+  return (
+    <div className="rounded-2xl border border-slate-100 bg-white px-3 py-2 shadow-sm sm:min-w-24">
+      <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">{label}</p>
+      <div className="mt-1 flex items-center gap-2">
+        <span className="size-2 rounded-full" style={{ background: color }} />
+        <p className="text-lg font-black leading-none text-slate-950">{value}</p>
       </div>
     </div>
   )
