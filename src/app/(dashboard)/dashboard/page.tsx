@@ -115,6 +115,24 @@ export default async function DashboardPage() {
     const date = new Date(appointment.appointment_date)
     return date >= thisMonthStart && date < nextMonthStart
   }).length
+  const monthlyAppointmentTrend = Array.from({ length: 6 }, (_, index) => {
+    const date = new Date(today.getFullYear(), today.getMonth() - (5 - index), 1)
+    const end = new Date(date.getFullYear(), date.getMonth() + 1, 1)
+    return {
+      label: date.toLocaleString('default', { month: 'short' }),
+      value: allAppointments.filter((appointment) => {
+        const appointmentDate = new Date(appointment.appointment_date)
+        return appointmentDate >= date && appointmentDate < end
+      }).length,
+    }
+  })
+  const careLoadTrend = [
+    { label: 'Overdue vaccines', value: overdueVaccinations.length },
+    { label: 'Overdue visits', value: overdueAppointments },
+    { label: 'Follow-ups', value: overdueFollowUps },
+    { label: 'Refills', value: refillsDueSoon.length },
+    { label: 'Active conditions', value: activeConditionCount },
+  ]
   const lastMonthAppointments = allAppointments.filter((appointment) => {
     const date = new Date(appointment.appointment_date)
     return date >= lastMonthStart && date < thisMonthStart
@@ -250,6 +268,21 @@ export default async function DashboardPage() {
           title="Refills Needed"
           value={`${refillsDueSoon.length}`}
           copy="Medications due in the next 30 days"
+        />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <ChartCard
+          title="Appointment Trend"
+          copy="Last six months of scheduled care"
+          data={monthlyAppointmentTrend}
+          tone="primary"
+        />
+        <ChartCard
+          title="Care Load"
+          copy="Open care items influencing the health score"
+          data={careLoadTrend}
+          tone="rose"
         />
       </div>
 
@@ -468,5 +501,66 @@ function MetricCard({
       <p className="mt-2 text-lg font-black leading-tight">{value}</p>
       <p className="mt-1 text-xs leading-5 text-muted-foreground">{copy}</p>
     </Link>
+  )
+}
+
+function ChartCard({
+  title,
+  copy,
+  data,
+  tone,
+}: {
+  title: string
+  copy: string
+  data: { label: string; value: number }[]
+  tone: 'primary' | 'rose'
+}) {
+  const maxValue = Math.max(1, ...data.map((item) => item.value))
+  const points = data.map((item, index) => {
+    const x = data.length === 1 ? 50 : (index / (data.length - 1)) * 100
+    const y = 84 - (item.value / maxValue) * 68
+    return `${x},${y}`
+  }).join(' ')
+  const stroke = tone === 'rose' ? '#e11d48' : '#10b981'
+
+  return (
+    <Card className="bg-white/75">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">{title}</CardTitle>
+        <p className="text-sm text-muted-foreground">{copy}</p>
+      </CardHeader>
+      <CardContent>
+        <svg viewBox="0 0 100 92" className="h-32 w-full overflow-visible" role="img" aria-label={title}>
+          <polyline
+            points={points}
+            fill="none"
+            stroke={stroke}
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          {data.map((item, index) => {
+            const x = data.length === 1 ? 50 : (index / (data.length - 1)) * 100
+            const y = 84 - (item.value / maxValue) * 68
+            return (
+              <g key={item.label}>
+                <circle cx={x} cy={y} r="3" fill={stroke} />
+                <text x={x} y="91" textAnchor="middle" className="fill-slate-500 text-[6px] font-bold">
+                  {item.label}
+                </text>
+              </g>
+            )
+          })}
+        </svg>
+        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+          {data.slice(-3).map((item) => (
+            <div key={item.label} className="rounded-2xl border bg-white/75 p-2 text-center">
+              <p className="text-sm font-black">{item.value}</p>
+              <p className="text-[11px] font-bold text-muted-foreground">{item.label}</p>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   )
 }

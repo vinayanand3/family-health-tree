@@ -211,6 +211,10 @@ export function MemberMetricsPanel({ personId, metadata, measurements, isChild }
             <Metric label={isChild ? 'Growth' : 'BMI'} value={isChild ? latestMeasurement?.growth_percentile ? `${latestMeasurement.growth_percentile}%` : 'None' : latestMeasurement?.bmi ? `${latestMeasurement.bmi}` : 'None'} />
           </div>
 
+          {measurements.length >= 2 && (
+            <MeasurementTrend measurements={measurements} isChild={isChild} />
+          )}
+
           <form onSubmit={addMeasurement} className="space-y-3 rounded-2xl border bg-muted/20 p-3">
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
@@ -296,6 +300,54 @@ export function MemberMetricsPanel({ personId, metadata, measurements, isChild }
           {error && <p className="text-sm text-destructive">{error}</p>}
         </CardContent>
       </Card>
+    </div>
+  )
+}
+
+function MeasurementTrend({
+  measurements,
+  isChild,
+}: {
+  measurements: HealthMeasurement[]
+  isChild: boolean
+}) {
+  const data = [...measurements]
+    .sort((a, b) => a.measured_at.localeCompare(b.measured_at))
+    .slice(-8)
+    .map((measurement) => ({
+      label: new Date(measurement.measured_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+      value: isChild ? measurement.growth_percentile ?? measurement.bmi ?? 0 : measurement.bmi ?? measurement.weight_kg ?? 0,
+    }))
+  const max = Math.max(1, ...data.map((item) => item.value))
+  const min = Math.min(0, ...data.map((item) => item.value))
+  const range = Math.max(1, max - min)
+  const points = data.map((item, index) => {
+    const x = data.length === 1 ? 50 : (index / (data.length - 1)) * 100
+    const y = 84 - ((item.value - min) / range) * 68
+    return `${x},${y}`
+  }).join(' ')
+
+  return (
+    <div className="rounded-2xl border bg-white/80 p-3">
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <p className="text-sm font-black">{isChild ? 'Growth trend' : 'BMI trend'}</p>
+        <p className="text-xs font-bold text-muted-foreground">{data.length} records</p>
+      </div>
+      <svg viewBox="0 0 100 92" className="h-28 w-full overflow-visible" role="img" aria-label={isChild ? 'Growth trend chart' : 'BMI trend chart'}>
+        <polyline points={points} fill="none" stroke="#10b981" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        {data.map((item, index) => {
+          const x = data.length === 1 ? 50 : (index / (data.length - 1)) * 100
+          const y = 84 - ((item.value - min) / range) * 68
+          return (
+            <g key={`${item.label}-${index}`}>
+              <circle cx={x} cy={y} r="3" fill="#10b981" />
+              <text x={x} y="91" textAnchor="middle" className="fill-slate-500 text-[6px] font-bold">
+                {item.label}
+              </text>
+            </g>
+          )
+        })}
+      </svg>
     </div>
   )
 }

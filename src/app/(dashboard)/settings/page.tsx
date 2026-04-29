@@ -8,8 +8,8 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { Copy, Check, Mail, Settings, UserPlus, Users } from 'lucide-react'
-import { Family, Person, UserRole } from '@/types'
+import { BellRing, Copy, Check, Mail, Settings, Smartphone, UserPlus, Users } from 'lucide-react'
+import { Family, Person, UserNotificationPreference, UserRole } from '@/types'
 
 interface FamilyState {
   family_id: string
@@ -36,10 +36,17 @@ export default function SettingsPage() {
   const [inviteEmail, setInviteEmail] = useState('')
   const [accessMembers, setAccessMembers] = useState<AccessMember[]>([])
   const [profiles, setProfiles] = useState<Person[]>([])
+  const [currentUserId, setCurrentUserId] = useState('')
+  const [notificationPreference, setNotificationPreference] = useState<UserNotificationPreference | null>(null)
+  const [emailEnabled, setEmailEnabled] = useState(true)
+  const [smsEnabled, setSmsEnabled] = useState(false)
+  const [pushEnabled, setPushEnabled] = useState(false)
+  const [phoneNumber, setPhoneNumber] = useState('')
 
   useEffect(() => {
     async function loadFamily() {
       const { data: { user } } = await supabase.auth.getUser()
+      setCurrentUserId(user!.id)
       const { data: fm } = await supabase
         .from('family_members')
         .select('*, families(*)')
@@ -48,7 +55,7 @@ export default function SettingsPage() {
 
       if (fm) {
         setFamily(fm)
-        const [membersResult, profilesResult] = await Promise.all([
+        const [membersResult, profilesResult, preferenceResult] = await Promise.all([
           supabase
             .from('family_members')
             .select('id, user_id, role, created_at')
@@ -59,9 +66,20 @@ export default function SettingsPage() {
             .select('*')
             .eq('family_id', fm.family_id)
             .order('first_name'),
+          supabase
+            .from('user_notification_preferences')
+            .select('*')
+            .eq('user_id', user!.id)
+            .maybeSingle(),
         ])
         setAccessMembers((membersResult.data ?? []) as AccessMember[])
         setProfiles((profilesResult.data ?? []) as Person[])
+        const preference = (preferenceResult.data ?? null) as UserNotificationPreference | null
+        setNotificationPreference(preference)
+        setEmailEnabled(preference?.email_enabled ?? true)
+        setSmsEnabled(preference?.sms_enabled ?? false)
+        setPushEnabled(preference?.push_enabled ?? false)
+        setPhoneNumber(preference?.phone_number ?? '')
       }
     }
     loadFamily()
@@ -153,6 +171,28 @@ export default function SettingsPage() {
     )
     window.location.href = `mailto:${inviteEmail}?subject=${subject}&body=${body}`
     setInviteEmail('')
+  }
+
+  async function saveNotificationPreferences() {
+    if (!currentUserId) return
+    setLoading(true)
+    const { data, error } = await supabase.from('user_notification_preferences').upsert({
+      user_id: currentUserId,
+      email_enabled: emailEnabled,
+      sms_enabled: smsEnabled,
+      push_enabled: pushEnabled,
+      phone_number: phoneNumber.trim() || null,
+      updated_at: new Date().toISOString(),
+    }).select('*').single()
+
+    setLoading(false)
+    if (error) {
+      setMessage('Error: ' + error.message)
+      return
+    }
+
+    setNotificationPreference(data as UserNotificationPreference)
+    setMessage('Reminder preferences saved.')
   }
 
   return (
@@ -260,6 +300,73 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
           </div>
+
+          <Card className="bg-white/80">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BellRing className="h-5 w-5 text-primary" />
+                Reminder delivery
+              </CardTitle>
+              <CardDescription>
+                Daily background jobs can send appointment, refill, vaccination, and follow-up reminders.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <label className="flex items-center gap-2 rounded-2xl border bg-white p-3 text-sm font-bold">
+                  <input
+                    type="checkbox"
+                    checked={emailEnabled}
+                    onChange={(event) => setEmailEnabled(event.target.checked)}
+                    className="h-4 w-4 rounded border-input"
+                  />
+                  <Mail className="h-4 w-4 text-primary" />
+                  Email
+                </label>
+                <label className="flex items-center gap-2 rounded-2xl border bg-white p-3 text-sm font-bold">
+                  <input
+                    type="checkbox"
+                    checked={smsEnabled}
+                    onChange={(event) => setSmsEnabled(event.target.checked)}
+                    className="h-4 w-4 rounded border-input"
+                  />
+                  <Smartphone className="h-4 w-4 text-primary" />
+                  SMS
+                </label>
+                <label className="flex items-center gap-2 rounded-2xl border bg-white p-3 text-sm font-bold">
+                  <input
+                    type="checkbox"
+                    checked={pushEnabled}
+                    onChange={(event) => setPushEnabled(event.target.checked)}
+                    className="h-4 w-4 rounded border-input"
+                  />
+                  <BellRing className="h-4 w-4 text-primary" />
+                  Push
+                </label>
+              </div>
+              <div className="space-y-1.5">
+                <Label>SMS phone number</Label>
+                <Input
+                  value={phoneNumber}
+                  onChange={(event) => setPhoneNumber(event.target.value)}
+                  placeholder="+15551234567"
+                />
+                <p className="text-xs text-muted-foreground">
+                  SMS sends only when Twilio environment variables are configured. Push is stored as a preference for future web push subscriptions.
+                </p>
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <Button type="button" onClick={saveNotificationPreferences} disabled={loading}>
+                  {loading ? 'Saving...' : 'Save reminder preferences'}
+                </Button>
+                {notificationPreference && (
+                  <p className="text-xs text-muted-foreground">
+                    Last updated {new Date(notificationPreference.updated_at).toLocaleString()}
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
 
           <Card className="bg-white/80">
             <CardHeader>

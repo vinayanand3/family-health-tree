@@ -132,6 +132,31 @@ export interface HealthMeasurement {
   created_at: string
 }
 
+export interface UserNotificationPreference {
+  user_id: string
+  email_enabled: boolean
+  sms_enabled: boolean
+  phone_number: string | null
+  push_enabled: boolean
+  quiet_hours_start: string | null
+  quiet_hours_end: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface CareReminderDelivery {
+  id: string
+  reminder_key: string
+  family_id: string
+  user_id: string
+  channel: 'email' | 'sms' | 'push'
+  status: 'sent' | 'skipped' | 'failed'
+  provider: string | null
+  error: string | null
+  sent_at: string
+  created_at: string
+}
+
 export interface Document {
   id: string
   person_id: string
