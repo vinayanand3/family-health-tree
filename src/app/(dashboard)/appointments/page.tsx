@@ -158,6 +158,33 @@ export default async function AppointmentsPage() {
         />
       </div>
 
+      {Object.keys(categoryCounts).length > 0 && (
+        <Card className="bg-white/75">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Stethoscope className="h-4 w-4 text-primary" />
+              Appointment breakdown
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {Object.entries(categoryCounts)
+              .sort((a, b) => b[1] - a[1])
+              .map(([category, count]) => (
+                <div key={category} className="grid gap-2 sm:grid-cols-[140px_1fr_44px] sm:items-center">
+                  <p className="text-sm font-black">{category}</p>
+                  <div className="h-3 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full bg-primary"
+                      style={{ width: `${Math.max(12, (count / appointmentsThisYear.length) * 100)}%` }}
+                    />
+                  </div>
+                  <p className="text-sm font-bold text-muted-foreground">{count}</p>
+                </div>
+              ))}
+          </CardContent>
+        </Card>
+      )}
+
       <AppointmentsBrowser
         upcoming={upcoming}
         past={past}

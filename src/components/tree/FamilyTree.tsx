@@ -582,6 +582,10 @@ function buildFlowElements(
   if (persons.length === 0) return { nodes: [] as Node[], edges: [] as Edge[] }
 
   const { positions, parentToChildren, spousePairs, siblingPairs } = computeLayout(persons, relationships)
+  const personById = new Map(persons.map((person) => [person.personId, person]))
+  const hasSharedRiskLink = (a: string, b: string) =>
+    (personById.get(a)?.sharedHereditaryRisks ?? 0) > 0 &&
+    (personById.get(b)?.sharedHereditaryRisks ?? 0) > 0
 
   const nodes: Node[] = persons.map((p) => ({
     id: p.personId,
@@ -595,6 +599,7 @@ function buildFlowElements(
   // Parent → child edges
   for (const [parentId, children] of Object.entries(parentToChildren)) {
     for (const childId of children) {
+      const sharedRisk = hasSharedRiskLink(parentId, childId)
       edges.push({
         id: `pc-${parentId}-${childId}`,
         source: parentId,
@@ -602,10 +607,14 @@ function buildFlowElements(
         sourceHandle: 'bottom',
         targetHandle: 'top',
         type: 'smoothstep',
-        style: { stroke: '#95b8a5', strokeWidth: 2.2 },
-        label: 'Parent',
-        labelStyle: RELATION_LABEL_STYLE,
-        labelBgStyle: RELATION_LABEL_BG,
+        style: {
+          stroke: sharedRisk ? '#f43f5e' : '#95b8a5',
+          strokeWidth: sharedRisk ? 3 : 2.2,
+          strokeDasharray: sharedRisk ? '7 5' : undefined,
+        },
+        label: sharedRisk ? 'Shared risk' : 'Parent',
+        labelStyle: sharedRisk ? { fill: '#be123c', fontSize: 11, fontWeight: 900 } : RELATION_LABEL_STYLE,
+        labelBgStyle: sharedRisk ? { fill: '#fff1f2', fillOpacity: 0.98, stroke: '#fecdd3', strokeWidth: 1 } : RELATION_LABEL_BG,
         labelBgPadding: [8, 4] as [number, number],
         labelBgBorderRadius: 10,
       })
@@ -618,6 +627,7 @@ function buildFlowElements(
     const posB = positions[b] ?? { x: 0, y: 0 }
     const leftId = posA.x <= posB.x ? a : b
     const rightId = leftId === a ? b : a
+    const sharedRisk = hasSharedRiskLink(a, b)
     edges.push({
       id: `sp-${a}-${b}`,
       source: leftId,
@@ -625,8 +635,12 @@ function buildFlowElements(
       sourceHandle: 'right',
       targetHandle: 'left',
       type: 'straight',
-      style: { stroke: '#dc6f75', strokeWidth: 2.2 },
-      label: '♥ Spouse',
+      style: {
+        stroke: sharedRisk ? '#f43f5e' : '#dc6f75',
+        strokeWidth: sharedRisk ? 3 : 2.2,
+        strokeDasharray: sharedRisk ? '7 5' : undefined,
+      },
+      label: sharedRisk ? 'Shared risk' : '♥ Spouse',
       labelStyle: { fill: '#be123c', fontSize: 11, fontWeight: 900 },
       labelBgStyle: { fill: '#fff1f2', fillOpacity: 0.98, stroke: '#fecdd3', strokeWidth: 1 },
       labelBgPadding: [8, 4] as [number, number],

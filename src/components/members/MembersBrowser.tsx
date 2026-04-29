@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { HealthCondition, Person } from '@/types'
 import { MemberCard } from '@/components/members/MemberCard'
@@ -16,10 +17,16 @@ interface MembersBrowserProps {
 }
 
 export function MembersBrowser({ persons, conditionsByPerson, initialFilter }: MembersBrowserProps) {
+  const router = useRouter()
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'conditions' | 'hereditary'>(
     initialFilter ?? 'all'
   )
+
+  function updateFilter(filter: 'all' | 'conditions' | 'hereditary') {
+    setStatusFilter(filter)
+    router.replace(filter === 'all' ? '/members' : `/members?health=${filter}`, { scroll: false })
+  }
 
   const filteredPersons = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()
@@ -53,19 +60,19 @@ export function MembersBrowser({ persons, conditionsByPerson, initialFilter }: M
           <div className="flex gap-2 overflow-x-auto pb-1 lg:pb-0">
             <FilterButton
               active={statusFilter === 'all'}
-              onClick={() => setStatusFilter('all')}
+              onClick={() => updateFilter('all')}
               icon={Users}
               label="All"
             />
             <FilterButton
               active={statusFilter === 'conditions'}
-              onClick={() => setStatusFilter('conditions')}
+              onClick={() => updateFilter('conditions')}
               icon={Activity}
               label="Conditions"
             />
             <FilterButton
               active={statusFilter === 'hereditary'}
-              onClick={() => setStatusFilter('hereditary')}
+              onClick={() => updateFilter('hereditary')}
               icon={ShieldAlert}
               label="Hereditary"
             />

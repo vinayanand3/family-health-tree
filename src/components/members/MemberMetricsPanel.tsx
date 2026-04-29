@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Activity, HeartPulse, Phone, ShieldCheck } from 'lucide-react'
+import { Activity, Edit3, HeartPulse, Phone, ShieldCheck, Trash2, X } from 'lucide-react'
 
 interface MemberMetricsPanelProps {
   personId: string
@@ -40,6 +40,7 @@ export function MemberMetricsPanel({ personId, metadata, measurements, isChild }
   const router = useRouter()
   const supabase = createClient()
   const [saving, setSaving] = useState(false)
+  const [editingMeasurementId, setEditingMeasurementId] = useState<string | null>(null)
   const [error, setError] = useState('')
 
   const latestMeasurement = useMemo(
@@ -68,6 +69,51 @@ export function MemberMetricsPanel({ personId, metadata, measurements, isChild }
     setSaving(false)
     if (upsertError) {
       setError(upsertError.message)
+      return
+    }
+
+    router.refresh()
+  }
+
+  async function updateMeasurement(event: FormEvent<HTMLFormElement>, measurementId: string) {
+    event.preventDefault()
+    setSaving(true)
+    setError('')
+    const form = new FormData(event.currentTarget)
+    const heightCm = numberOrNull(form.get('height_cm'))
+    const weightKg = numberOrNull(form.get('weight_kg'))
+
+    const { error: updateError } = await supabase.from('health_measurements').update({
+      measured_at: emptyToNull(form.get('measured_at')),
+      height_cm: heightCm,
+      weight_kg: weightKg,
+      bmi: calculateBmi(heightCm, weightKg),
+      growth_percentile: numberOrNull(form.get('growth_percentile')),
+      notes: emptyToNull(form.get('notes')),
+    }).eq('id', measurementId)
+
+    setSaving(false)
+    if (updateError) {
+      setError(updateError.message)
+      return
+    }
+
+    setEditingMeasurementId(null)
+    router.refresh()
+  }
+
+  async function deleteMeasurement(measurementId: string) {
+    if (!window.confirm('Delete this measurement?')) return
+    setSaving(true)
+    setError('')
+    const { error: deleteError } = await supabase
+      .from('health_measurements')
+      .delete()
+      .eq('id', measurementId)
+
+    setSaving(false)
+    if (deleteError) {
+      setError(deleteError.message)
       return
     }
 
@@ -185,6 +231,67 @@ export function MemberMetricsPanel({ personId, metadata, measurements, isChild }
               Add measurement
             </Button>
           </form>
+
+          {measurements.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-sm font-black">Recent measurements</p>
+              {measurements.slice(0, 5).map((measurement) => (
+                <div key={measurement.id} className="rounded-2xl border bg-white/80 p-3">
+                  {editingMeasurementId === measurement.id ? (
+                    <form onSubmit={(event) => updateMeasurement(event, measurement.id)} className="space-y-3">
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <Input name="measured_at" type="date" required defaultValue={measurement.measured_at} />
+                        <Input name="growth_percentile" type="number" step="0.1" min="0" max="100" defaultValue={measurement.growth_percentile ?? ''} placeholder="Growth percentile" />
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <Input name="height_cm" type="number" step="0.1" min="0" defaultValue={measurement.height_cm ?? ''} placeholder="Height cm" />
+                        <Input name="weight_kg" type="number" step="0.1" min="0" defaultValue={measurement.weight_kg ?? ''} placeholder="Weight kg" />
+                      </div>
+                      <Textarea name="notes" rows={2} defaultValue={measurement.notes ?? ''} />
+                      <div className="flex flex-col gap-2 sm:flex-row">
+                        <Button type="button" variant="outline" onClick={() => setEditingMeasurementId(null)} disabled={saving}>
+                          <X className="h-3.5 w-3.5" />
+                          Cancel
+                        </Button>
+                        <Button type="submit" disabled={saving}>
+                          {saving ? 'Saving...' : 'Save changes'}
+                        </Button>
+                      </div>
+                    </form>
+                  ) : (
+                    <>
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-black">{measurement.measured_at}</p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {[
+                              measurement.height_cm ? `${measurement.height_cm} cm` : null,
+                              measurement.weight_kg ? `${measurement.weight_kg} kg` : null,
+                              measurement.bmi ? `BMI ${measurement.bmi}` : null,
+                              measurement.growth_percentile ? `${measurement.growth_percentile}% growth` : null,
+                            ].filter(Boolean).join(' · ') || 'No values recorded'}
+                          </p>
+                          {measurement.notes && (
+                            <p className="mt-1 text-xs leading-5 text-muted-foreground">{measurement.notes}</p>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button type="button" variant="outline" size="sm" onClick={() => setEditingMeasurementId(measurement.id)}>
+                            <Edit3 className="h-3.5 w-3.5" />
+                            Edit
+                          </Button>
+                          <Button type="button" variant="outline" size="sm" onClick={() => deleteMeasurement(measurement.id)} disabled={saving}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Delete
+                          </Button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
 
           {error && <p className="text-sm text-destructive">{error}</p>}
         </CardContent>
