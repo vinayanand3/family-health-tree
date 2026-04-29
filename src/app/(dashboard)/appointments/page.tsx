@@ -1,11 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { AppointmentList } from '@/components/appointments/AppointmentList'
+import { AppointmentsBrowser } from '@/components/appointments/AppointmentsBrowser'
+import { AppointmentReminderControls } from '@/components/appointments/AppointmentReminderControls'
 import { buttonVariants } from '@/components/ui/button'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import Link from 'next/link'
 import { BellRing, CalendarDays, MapPin, Plus, UserRound } from 'lucide-react'
-import { Appointment } from '@/types'
+import { Appointment, Person } from '@/types'
 import { differenceInCalendarDays, format, formatDistanceToNow } from 'date-fns'
 
 export default async function AppointmentsPage() {
@@ -20,31 +20,47 @@ export default async function AppointmentsPage() {
 
   if (!familyMember) redirect('/settings')
 
-  const { data: allAppointments } = await supabase
-    .from('appointments')
-    .select('*, persons(first_name, last_name)')
-    .eq('family_id', familyMember.family_id)
-    .order('appointment_date', { ascending: false })
+  const [appointmentsResult, personsResult] = await Promise.all([
+    supabase
+      .from('appointments')
+      .select('*, persons(first_name, last_name)')
+      .eq('family_id', familyMember.family_id)
+      .order('appointment_date', { ascending: false }),
+    supabase
+      .from('persons')
+      .select('*')
+      .eq('family_id', familyMember.family_id)
+      .order('first_name'),
+  ])
 
   const now = new Date().toISOString()
-  const upcoming = ((allAppointments ?? []) as Appointment[])
+  const upcoming = ((appointmentsResult.data ?? []) as Appointment[])
     .filter((a) => a.appointment_date >= now && !a.is_completed)
     .reverse()
   const nextAppointment = upcoming[0]
-  const past = ((allAppointments ?? []) as Appointment[]).filter(
+  const past = ((appointmentsResult.data ?? []) as Appointment[]).filter(
     (a) => a.appointment_date < now || a.is_completed
   )
+  const persons = (personsResult.data ?? []) as Person[]
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="overflow-hidden rounded-[2rem] border border-white/80 bg-white/75 shadow-xl shadow-slate-900/10 backdrop-blur-xl">
+        <div className="flex flex-col gap-4 p-5 sm:p-6 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Appointments</h1>
-          <p className="text-muted-foreground text-sm">{upcoming.length} upcoming</p>
+            <p className="mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-primary">
+              <CalendarDays className="h-3.5 w-3.5" />
+              Care schedule
+            </p>
+          <h1 className="text-3xl font-black">Appointments</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+              {upcoming.length} upcoming · {past.length} past visits
+            </p>
         </div>
         <Link href="/appointments/new" className={buttonVariants({})}>
           <Plus className="h-4 w-4 mr-2" /> Add Appointment
         </Link>
+        </div>
       </div>
 
       {nextAppointment && (
@@ -84,23 +100,17 @@ export default async function AppointmentsPage() {
                 </div>
               </div>
             </div>
-            <p className="text-sm font-medium text-primary">Free in-app reminder</p>
+            <AppointmentReminderControls appointment={nextAppointment} />
           </div>
         </div>
       )}
 
-      <Tabs defaultValue="upcoming">
-        <TabsList>
-          <TabsTrigger value="upcoming">Upcoming ({upcoming.length})</TabsTrigger>
-          <TabsTrigger value="past">Past ({past.length})</TabsTrigger>
-        </TabsList>
-        <TabsContent value="upcoming" className="mt-4">
-          <AppointmentList appointments={upcoming} showPerson />
-        </TabsContent>
-        <TabsContent value="past" className="mt-4">
-          <AppointmentList appointments={past} showPerson />
-        </TabsContent>
-      </Tabs>
+      <AppointmentsBrowser
+        upcoming={upcoming}
+        past={past}
+        persons={persons}
+        familyId={familyMember.family_id}
+      />
     </div>
   )
 }

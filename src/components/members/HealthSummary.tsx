@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select'
+import { EmptyStateIllustration } from '@/components/ui/EmptyStateIllustration'
 import { Pill, AlertTriangle, Activity, Plus } from 'lucide-react'
 
 interface HealthSummaryProps {
@@ -56,6 +57,25 @@ function AddButton({ active, onClick }: { active: boolean; onClick: () => void }
       <Plus className="h-3.5 w-3.5" />
       {active ? 'Close' : 'Add'}
     </Button>
+  )
+}
+
+function EmptyHealthState({
+  icon: Icon,
+  title,
+  copy,
+}: {
+  icon: typeof Activity
+  title: string
+  copy: string
+}) {
+  return (
+    <div className="rounded-2xl border border-dashed border-border bg-muted/20 p-4 text-center">
+      <EmptyStateIllustration variant="health" />
+      <Icon className="mx-auto mt-3 h-5 w-5 text-primary" />
+      <p className="mt-2 text-sm font-black">{title}</p>
+      <p className="mt-1 text-xs leading-5 text-muted-foreground">{copy}</p>
+    </div>
   )
 }
 
@@ -159,7 +179,11 @@ export function HealthSummary({ personId, conditions, medications, allergies }: 
         </CardHeader>
         <CardContent className="space-y-4">
           {conditions.length === 0 ? (
-            <p className="text-sm text-muted-foreground">None recorded</p>
+            <EmptyHealthState
+              icon={Activity}
+              title="No conditions recorded"
+              copy="Add diagnoses, chronic issues, or resolved concerns when they matter."
+            />
           ) : (
             <ul className="space-y-2">
               {conditions.map((c) => (
@@ -228,7 +252,11 @@ export function HealthSummary({ personId, conditions, medications, allergies }: 
         </CardHeader>
         <CardContent className="space-y-4">
           {medications.length === 0 ? (
-            <p className="text-sm text-muted-foreground">None recorded</p>
+            <EmptyHealthState
+              icon={Pill}
+              title="No medications recorded"
+              copy="Track current medicines, dosage, frequency, and refill context."
+            />
           ) : (
             <ul className="space-y-2">
               {medications.map((m) => (
@@ -289,7 +317,11 @@ export function HealthSummary({ personId, conditions, medications, allergies }: 
         </CardHeader>
         <CardContent className="space-y-4">
           {allergies.length === 0 ? (
-            <p className="text-sm text-muted-foreground">None recorded</p>
+            <EmptyHealthState
+              icon={AlertTriangle}
+              title="No allergies recorded"
+              copy="Add allergies and severity so care decisions are easier later."
+            />
           ) : (
             <ul className="space-y-2">
               {allergies.map((a) => (

@@ -1,9 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { MemberCard } from '@/components/members/MemberCard'
+import { MembersBrowser } from '@/components/members/MembersBrowser'
 import { buttonVariants } from '@/components/ui/button'
+import { EmptyStateIllustration } from '@/components/ui/EmptyStateIllustration'
 import Link from 'next/link'
-import { UserPlus, X } from 'lucide-react'
+import { HeartPulse, UserPlus, X } from 'lucide-react'
 import { HealthCondition, Person } from '@/types'
 
 type MembersSearchParams = Promise<{ health?: string }>
@@ -41,18 +42,6 @@ export default async function MembersPage({ searchParams }: { searchParams?: Mem
   }, {})
 
   const allPersons = (persons ?? []) as Person[]
-  const filteredPersons = allPersons.filter((person) => {
-    if (healthFilter === 'conditions') {
-      return (conditionsByPerson[person.id] ?? []).length > 0
-    }
-
-    if (healthFilter === 'hereditary') {
-      return (conditionsByPerson[person.id] ?? []).some((condition) => condition.is_hereditary)
-    }
-
-    return true
-  })
-
   const pageTitle = healthFilter === 'conditions'
     ? 'Members with health conditions'
     : healthFilter === 'hereditary'
@@ -60,17 +49,22 @@ export default async function MembersPage({ searchParams }: { searchParams?: Mem
       : 'Members'
 
   const pageDescription = healthFilter
-    ? `${filteredPersons.length} of ${allPersons.length} family members`
+    ? `Filtered view across ${allPersons.length} family members`
     : `${allPersons.length} family members`
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="overflow-hidden rounded-[2rem] border border-white/80 bg-white/75 shadow-xl shadow-slate-900/10 backdrop-blur-xl">
+        <div className="flex flex-col gap-4 p-5 sm:p-6 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">{pageTitle}</h1>
-          <p className="text-muted-foreground text-sm">{pageDescription}</p>
+            <p className="mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-primary">
+              <HeartPulse className="h-3.5 w-3.5" />
+              Family profiles
+            </p>
+          <h1 className="text-3xl font-black">{pageTitle}</h1>
+          <p className="mt-2 text-sm text-muted-foreground">{pageDescription}</p>
         </div>
-        <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
           {healthFilter && (
             <Link href="/members" className={buttonVariants({ variant: 'outline' })}>
               <X className="h-4 w-4 mr-2" />
@@ -82,32 +76,26 @@ export default async function MembersPage({ searchParams }: { searchParams?: Mem
             Add Member
           </Link>
         </div>
+        </div>
       </div>
 
       {allPersons.length === 0 ? (
-        <div className="text-center py-20 border rounded-lg bg-muted/20">
-          <p className="text-muted-foreground mb-4">No family members yet.</p>
+        <div className="rounded-[2rem] border border-dashed border-border bg-white/65 px-4 py-20 text-center shadow-sm backdrop-blur">
+          <EmptyStateIllustration variant="family" />
+          <p className="mt-4 font-black">No family members yet</p>
+          <p className="mx-auto mb-5 mt-2 max-w-md text-sm text-muted-foreground">
+            Add the first person to start connecting health records, appointments, and family relationships.
+          </p>
           <Link href="/members/new" className={buttonVariants({})}>
             Add your first member
           </Link>
         </div>
-      ) : filteredPersons.length === 0 ? (
-        <div className="text-center py-20 border rounded-lg bg-muted/20">
-          <p className="text-muted-foreground mb-4">No members match this view.</p>
-          <Link href="/members" className={buttonVariants({ variant: 'outline' })}>
-            View all members
-          </Link>
-        </div>
       ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredPersons.map((person) => (
-            <MemberCard
-              key={person.id}
-              person={person}
-              conditions={conditionsByPerson[person.id] ?? []}
-            />
-          ))}
-        </div>
+        <MembersBrowser
+          persons={allPersons}
+          conditionsByPerson={conditionsByPerson}
+          initialFilter={healthFilter}
+        />
       )}
     </div>
   )

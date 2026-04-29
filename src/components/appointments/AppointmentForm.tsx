@@ -16,9 +16,18 @@ interface AppointmentFormProps {
   onSubmit: (data: AppointmentFormData) => Promise<void>
   defaultPersonId?: string
   isLoading?: boolean
+  submitLabel?: string
+  onCancel?: () => void
 }
 
-export function AppointmentForm({ persons, onSubmit, defaultPersonId, isLoading }: AppointmentFormProps) {
+export function AppointmentForm({
+  persons,
+  onSubmit,
+  defaultPersonId,
+  isLoading,
+  submitLabel = 'Save Appointment',
+  onCancel,
+}: AppointmentFormProps) {
   const [selectedPersonId, setSelectedPersonId] = useState(defaultPersonId ?? '')
   const { register, handleSubmit, setValue, formState: { errors } } = useForm<AppointmentFormData>({
     resolver: zodResolver(appointmentSchema),
@@ -86,9 +95,16 @@ export function AppointmentForm({ persons, onSubmit, defaultPersonId, isLoading 
         <Textarea {...register('notes')} placeholder="Any notes..." rows={3} />
       </div>
 
-      <Button type="submit" className="w-full" disabled={isLoading}>
-        {isLoading ? 'Saving...' : 'Save Appointment'}
-      </Button>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        {onCancel && (
+          <Button type="button" variant="outline" className="w-full" onClick={onCancel} disabled={isLoading}>
+            Cancel
+          </Button>
+        )}
+        <Button type="submit" className="w-full" disabled={isLoading}>
+          {isLoading ? 'Saving...' : submitLabel}
+        </Button>
+      </div>
     </form>
   )
 }

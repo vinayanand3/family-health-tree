@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { CalendarDays, HeartPulse, LayoutDashboard, LogOut, Settings, TreePine, Users } from 'lucide-react'
+import { CalendarDays, HeartPulse, LayoutDashboard, LogOut, Settings, TreePine, UserPlus, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface HeaderProps {
@@ -19,10 +19,10 @@ interface HeaderProps {
 }
 
 const mobileNavItems = [
-  { href: '/dashboard', label: 'Home', icon: LayoutDashboard },
-  { href: '/tree', label: 'Tree', icon: TreePine },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/tree', label: 'Family Tree', icon: TreePine },
   { href: '/members', label: 'Members', icon: Users },
-  { href: '/appointments', label: 'Visits', icon: CalendarDays },
+  { href: '/appointments', label: 'Appointments', icon: CalendarDays },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]
 
@@ -56,6 +56,15 @@ export function Header({ userEmail }: HeaderProps) {
             <div className="px-2 py-2">
               <p className="text-xs font-medium truncate">{userEmail}</p>
             </div>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => router.push('/settings')} className="cursor-pointer gap-2">
+              <UserPlus className="h-4 w-4" />
+              Invite family
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => router.push('/settings')} className="cursor-pointer gap-2">
+              <Settings className="h-4 w-4" />
+              Profile settings
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={signOut} className="text-destructive cursor-pointer gap-2">
               <LogOut className="h-4 w-4" />

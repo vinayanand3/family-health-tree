@@ -8,13 +8,20 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { Copy, Check, Mail } from 'lucide-react'
-import { Family, UserRole } from '@/types'
+import { Copy, Check, Mail, Settings, UserPlus, Users } from 'lucide-react'
+import { Family, Person, UserRole } from '@/types'
 
 interface FamilyState {
   family_id: string
   role: UserRole
   families: Family
+}
+
+interface AccessMember {
+  id: string
+  user_id: string | null
+  role: UserRole
+  created_at: string
 }
 
 export default function SettingsPage() {
@@ -27,6 +34,8 @@ export default function SettingsPage() {
   const [linkCopied, setLinkCopied] = useState(false)
   const [message, setMessage] = useState('')
   const [inviteEmail, setInviteEmail] = useState('')
+  const [accessMembers, setAccessMembers] = useState<AccessMember[]>([])
+  const [profiles, setProfiles] = useState<Person[]>([])
 
   useEffect(() => {
     async function loadFamily() {
@@ -37,7 +46,23 @@ export default function SettingsPage() {
         .eq('user_id', user!.id)
         .single()
 
-      if (fm) setFamily(fm)
+      if (fm) {
+        setFamily(fm)
+        const [membersResult, profilesResult] = await Promise.all([
+          supabase
+            .from('family_members')
+            .select('id, user_id, role, created_at')
+            .eq('family_id', fm.family_id)
+            .order('created_at'),
+          supabase
+            .from('persons')
+            .select('*')
+            .eq('family_id', fm.family_id)
+            .order('first_name'),
+        ])
+        setAccessMembers((membersResult.data ?? []) as AccessMember[])
+        setProfiles((profilesResult.data ?? []) as Person[])
+      }
     }
     loadFamily()
   }, [supabase])
@@ -131,16 +156,27 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-lg">
-      <div>
-        <h1 className="text-2xl font-bold">Settings</h1>
-        <p className="text-muted-foreground text-sm">Manage your family group</p>
+    <div className="max-w-5xl space-y-6">
+      <div className="overflow-hidden rounded-[2rem] border border-white/80 bg-white/75 p-5 shadow-xl shadow-slate-900/10 backdrop-blur-xl sm:p-6">
+        <p className="mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-primary">
+          <Settings className="h-3.5 w-3.5" />
+          Family workspace
+        </p>
+        <h1 className="text-3xl font-black">Settings</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Manage the current family, invite relatives, and keep the shared workspace connected.
+        </p>
       </div>
 
       {family?.families ? (
-        <Card>
+        <>
+          <div className="grid gap-4 lg:grid-cols-[1fr_0.85fr]">
+            <Card className="bg-white/80">
           <CardHeader>
-            <CardTitle>{family.families.name}</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-primary" />
+              {family.families.name}
+            </CardTitle>
             <CardDescription>
               Your role: <Badge variant="secondary">{family.role}</Badge>
             </CardDescription>
@@ -197,7 +233,109 @@ export default function SettingsPage() {
               </div>
             </div>
           </CardContent>
-        </Card>
+            </Card>
+
+          <Card className="bg-white/80">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <UserPlus className="h-5 w-5 text-primary" />
+                Invite checklist
+              </CardTitle>
+              <CardDescription>Use this whenever a relative needs access.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {[
+                'Copy the invite link.',
+                'Send it to the family member.',
+                'They sign up with email or Google.',
+                'The invite code connects them to this family.',
+              ].map((item, index) => (
+                <div key={item} className="flex gap-3 rounded-2xl border bg-white p-3">
+                  <span className="grid size-7 shrink-0 place-items-center rounded-full bg-primary/10 text-xs font-black text-primary">
+                    {index + 1}
+                  </span>
+                  <p className="text-sm font-medium text-muted-foreground">{item}</p>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+          </div>
+
+          <Card className="bg-white/80">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-primary" />
+                Family management
+              </CardTitle>
+              <CardDescription>
+                See who has app access and which health profiles are in this workspace.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-4 lg:grid-cols-2">
+              <div className="space-y-3">
+                <p className="text-sm font-black">App access</p>
+                {accessMembers.length > 0 ? (
+                  accessMembers.map((member) => {
+                    const linkedProfile = profiles.find((profile) => profile.user_id === member.user_id)
+                    return (
+                      <div key={member.id} className="rounded-2xl border bg-white p-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-black">
+                              {linkedProfile
+                                ? `${linkedProfile.first_name} ${linkedProfile.last_name ?? ''}`
+                                : `Account ${member.user_id?.slice(0, 8) ?? 'pending'}`}
+                            </p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              Joined {new Date(member.created_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <Badge variant="secondary">{member.role}</Badge>
+                        </div>
+                      </div>
+                    )
+                  })
+                ) : (
+                  <p className="rounded-2xl border border-dashed bg-muted/20 p-3 text-sm text-muted-foreground">
+                    No app access records found yet.
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-3">
+                <p className="text-sm font-black">Health profiles</p>
+                {profiles.length > 0 ? (
+                  profiles.map((profile) => (
+                    <div key={profile.id} className="flex items-center justify-between gap-3 rounded-2xl border bg-white p-3">
+                      <div>
+                        <p className="text-sm font-black">
+                          {profile.first_name} {profile.last_name}
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {profile.user_id ? 'Linked to an app account' : 'Profile only'}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          window.location.href = `/members/${profile.id}/edit`
+                        }}
+                      >
+                        Manage
+                      </Button>
+                    </div>
+                  ))
+                ) : (
+                  <p className="rounded-2xl border border-dashed bg-muted/20 p-3 text-sm text-muted-foreground">
+                    No health profiles yet. Add members to build the tree.
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </>
       ) : (
         <div className="space-y-4">
           <Card className="border-primary/30 bg-primary/5">

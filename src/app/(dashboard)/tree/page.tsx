@@ -167,8 +167,8 @@ export default async function TreePage() {
 
   return (
     <div className="space-y-5">
-      <div className="overflow-hidden rounded-[2rem] border border-white/80 bg-white/75 shadow-2xl shadow-slate-900/10 backdrop-blur-xl">
-        <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[1fr_auto] lg:items-end">
+      <div className="overflow-hidden rounded-[2rem] border border-white/80 bg-white/75 shadow-xl shadow-slate-900/10 backdrop-blur-xl">
+        <div className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[1fr_auto] lg:items-end">
           <div>
             <div className="mb-4 flex flex-wrap gap-2">
               <Badge variant="secondary" className="gap-1 rounded-full px-3 py-1">
@@ -188,7 +188,7 @@ export default async function TreePage() {
               <Sparkles className="h-3.5 w-3.5" />
               Family care map
             </p>
-            <h1 className="max-w-3xl text-3xl font-black leading-tight sm:text-5xl">
+            <h1 className="max-w-3xl text-3xl font-black leading-tight sm:text-4xl">
               Your family tree, health context included.
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
@@ -211,24 +211,6 @@ export default async function TreePage() {
             </Link>
           </div>
         </div>
-
-        <div className="grid border-t border-slate-100 bg-white/45 sm:grid-cols-3">
-          <CareSignal label="Active conditions" value={activeConditionCount} tone="amber" />
-          <CareSignal label="Hereditary risks" value={hereditaryRiskCount} tone="rose" />
-          <CareSignal label="Upcoming visits" value={upcomingVisitCount} tone="blue" />
-        </div>
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Link href="/dashboard" className="rounded-2xl border border-white/70 bg-white/65 p-4 text-sm font-bold shadow-sm backdrop-blur transition-colors hover:bg-white">
-          Back to home
-        </Link>
-        <Link href="/appointments" className="rounded-2xl border border-white/70 bg-white/65 p-4 text-sm font-bold shadow-sm backdrop-blur transition-colors hover:bg-white">
-          Review appointments
-        </Link>
-        <Link href="/settings" className="rounded-2xl border border-white/70 bg-white/65 p-4 text-sm font-bold shadow-sm backdrop-blur transition-colors hover:bg-white">
-          Family settings
-        </Link>
       </div>
 
       {persons.length === 0 ? (
@@ -253,6 +235,26 @@ export default async function TreePage() {
           relationshipCount={relationships.length}
         />
       )}
+
+      <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+        <div className="grid overflow-hidden rounded-[2rem] border border-white/80 bg-white/70 shadow-sm backdrop-blur sm:grid-cols-3">
+          <CareSignal label="Active conditions" value={activeConditionCount} tone="amber" />
+          <CareSignal label="Hereditary risks" value={hereditaryRiskCount} tone="rose" />
+          <CareSignal label="Upcoming visits" value={upcomingVisitCount} tone="blue" />
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+          <Link href="/dashboard" className="rounded-2xl border border-white/70 bg-white/65 p-4 text-sm font-bold shadow-sm backdrop-blur transition-colors hover:bg-white">
+            Back to dashboard
+          </Link>
+          <Link href="/appointments" className="rounded-2xl border border-white/70 bg-white/65 p-4 text-sm font-bold shadow-sm backdrop-blur transition-colors hover:bg-white">
+            Review appointments
+          </Link>
+          <Link href="/settings" className="rounded-2xl border border-white/70 bg-white/65 p-4 text-sm font-bold shadow-sm backdrop-blur transition-colors hover:bg-white">
+            Family settings
+          </Link>
+        </div>
+      </div>
     </div>
   )
 }
