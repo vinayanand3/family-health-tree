@@ -1,10 +1,19 @@
 import Link from 'next/link'
 import Image from 'next/image'
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { Heart, TreePine, CalendarDays, Shield, ArrowRight, Sparkles } from 'lucide-react'
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (user) redirect('/dashboard')
+
   return (
     <main className="min-h-screen flex flex-col overflow-hidden">
       <nav className="border-b border-border/70 bg-background/75 backdrop-blur-xl">
@@ -55,9 +64,6 @@ export default function LandingPage() {
               <Link href="/signup" className={cn(buttonVariants({ size: 'lg' }), 'px-6')}>
                 Start your tree
                 <ArrowRight className="h-4 w-4" />
-              </Link>
-              <Link href="/login" className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'px-6 bg-white/80')}>
-                Sign in
               </Link>
             </div>
             <div className="mt-10 grid max-w-xl grid-cols-1 gap-4 sm:grid-cols-3">

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { getAuthCallbackUrl } from '@/lib/auth-redirect'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -37,7 +38,7 @@ export default function SignupPage() {
       window.localStorage.setItem('familyhealth_invite_code', normalizedInviteCode)
     }
 
-    const redirectUrl = `${window.location.origin}/auth/callback${normalizedInviteCode ? `?invite=${normalizedInviteCode}` : ''}`
+    const redirectUrl = getAuthCallbackUrl(`/auth/callback${normalizedInviteCode ? `?invite=${normalizedInviteCode}` : ''}`)
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -67,7 +68,7 @@ export default function SignupPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback${normalizedInviteCode ? `?invite=${normalizedInviteCode}` : ''}`,
+        redirectTo: getAuthCallbackUrl(`/auth/callback${normalizedInviteCode ? `?invite=${normalizedInviteCode}` : ''}`),
       },
     })
 
