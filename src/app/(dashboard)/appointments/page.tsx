@@ -2,11 +2,22 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { AppointmentsBrowser } from '@/components/appointments/AppointmentsBrowser'
 import { AppointmentReminderControls } from '@/components/appointments/AppointmentReminderControls'
-import { buttonVariants } from '@/components/ui/button'
-import Link from 'next/link'
-import { BellRing, CalendarDays, MapPin, Plus, UserRound } from 'lucide-react'
+import { AddAppointmentTrigger } from '@/components/appointments/AddAppointmentTrigger'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Activity, BellRing, CalendarDays, MapPin, Stethoscope, TrendingUp, UserRound } from 'lucide-react'
 import { Appointment, Person } from '@/types'
 import { differenceInCalendarDays, format, formatDistanceToNow } from 'date-fns'
+
+function appointmentCategory(appointment: Appointment) {
+  const text = `${appointment.title} ${appointment.doctor_name ?? ''}`.toLowerCase()
+  if (text.includes('pediatric')) return 'Pediatric'
+  if (text.includes('dental') || text.includes('dentist')) return 'Dental'
+  if (text.includes('eye') || text.includes('vision') || text.includes('optom')) return 'Vision'
+  if (text.includes('cardio')) return 'Cardiology'
+  if (text.includes('derm')) return 'Dermatology'
+  if (text.includes('checkup') || text.includes('physical') || text.includes('annual')) return 'Checkup'
+  return 'General'
+}
 
 export default async function AppointmentsPage() {
   const supabase = await createClient()
@@ -42,6 +53,29 @@ export default async function AppointmentsPage() {
     (a) => a.appointment_date < now || a.is_completed
   )
   const persons = (personsResult.data ?? []) as Person[]
+  const completedCheckups = ((appointmentsResult.data ?? []) as Appointment[]).filter((appointment) => {
+    const text = appointment.title.toLowerCase()
+    return appointment.is_completed && (text.includes('checkup') || text.includes('physical') || text.includes('annual'))
+  })
+  const averageDaysSinceCheckup = completedCheckups.length > 0
+    ? Math.round(
+        completedCheckups.reduce((sum, appointment) => {
+          const days = differenceInCalendarDays(new Date(), new Date(appointment.completed_at ?? appointment.appointment_date))
+          return sum + Math.max(0, days)
+        }, 0) / completedCheckups.length
+      )
+    : null
+  const currentYear = new Date().getFullYear()
+  const appointmentsThisYear = ((appointmentsResult.data ?? []) as Appointment[]).filter(
+    (appointment) => new Date(appointment.appointment_date).getFullYear() === currentYear
+  )
+  const perMemberFrequency = persons.length > 0 ? (appointmentsThisYear.length / persons.length).toFixed(1) : '0'
+  const categoryCounts = appointmentsThisYear.reduce<Record<string, number>>((counts, appointment) => {
+    const category = appointmentCategory(appointment)
+    counts[category] = (counts[category] ?? 0) + 1
+    return counts
+  }, {})
+  const topCategory = Object.entries(categoryCounts).sort((a, b) => b[1] - a[1])[0]
 
   return (
     <div className="space-y-6">
@@ -57,9 +91,7 @@ export default async function AppointmentsPage() {
               {upcoming.length} upcoming · {past.length} past visits
             </p>
         </div>
-        <Link href="/appointments/new" className={buttonVariants({})}>
-          <Plus className="h-4 w-4 mr-2" /> Add Appointment
-        </Link>
+        <AddAppointmentTrigger />
         </div>
       </div>
 
@@ -105,6 +137,27 @@ export default async function AppointmentsPage() {
         </div>
       )}
 
+      <div className="grid gap-4 md:grid-cols-3">
+        <AnalyticsCard
+          icon={TrendingUp}
+          title="Frequency"
+          value={`${perMemberFrequency} per member`}
+          copy={`${appointmentsThisYear.length} appointments in ${currentYear}`}
+        />
+        <AnalyticsCard
+          icon={Activity}
+          title="Checkup recency"
+          value={averageDaysSinceCheckup === null ? 'No completed checkups' : `${averageDaysSinceCheckup} days avg`}
+          copy="Based on completed appointments tagged as checkup, physical, or annual"
+        />
+        <AnalyticsCard
+          icon={Stethoscope}
+          title="Care mix"
+          value={topCategory ? topCategory[0] : 'No data yet'}
+          copy={topCategory ? `${topCategory[1]} visit${topCategory[1] === 1 ? '' : 's'} this year` : 'Doctor and title heuristics will fill this in'}
+        />
+      </div>
+
       <AppointmentsBrowser
         upcoming={upcoming}
         past={past}
@@ -112,5 +165,32 @@ export default async function AppointmentsPage() {
         familyId={familyMember.family_id}
       />
     </div>
+  )
+}
+
+function AnalyticsCard({
+  icon: Icon,
+  title,
+  value,
+  copy,
+}: {
+  icon: typeof TrendingUp
+  title: string
+  value: string
+  copy: string
+}) {
+  return (
+    <Card className="bg-white/75">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Icon className="h-4 w-4 text-primary" />
+          {title}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="text-lg font-black">{value}</p>
+        <p className="mt-1 text-xs leading-5 text-muted-foreground">{copy}</p>
+      </CardContent>
+    </Card>
   )
 }

@@ -4,7 +4,7 @@ import { AppointmentList } from '@/components/appointments/AppointmentList'
 import { AppointmentReminderControls } from '@/components/appointments/AppointmentReminderControls'
 import { buttonVariants } from '@/components/ui/button'
 import { EmptyStateIllustration } from '@/components/ui/EmptyStateIllustration'
-import { Users, CalendarDays, Activity, AlertTriangle, ArrowRight, BellRing, MapPin, UserRound, TreePine, Plus, UserPlus } from 'lucide-react'
+import { Users, CalendarDays, Activity, AlertTriangle, ArrowRight, BellRing, MapPin, UserRound, TreePine, Plus, UserPlus, Pill, ShieldCheck, TrendingUp } from 'lucide-react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { Appointment } from '@/types'
@@ -26,31 +26,123 @@ export default async function DashboardPage() {
 
   const familyId = familyMember.family_id
 
-  const personsResult = await supabase
-    .from('persons')
-    .select('id, first_name, last_name, photo_url')
-    .eq('family_id', familyId)
-    .order('created_at')
-
-  const appointmentsResult = await supabase
-    .from('appointments')
-    .select('*, persons(first_name, last_name)')
-    .eq('family_id', familyId)
-    .eq('is_completed', false)
-    .gte('appointment_date', new Date().toISOString())
-    .order('appointment_date', { ascending: true })
-    .limit(5)
+  const [personsResult, appointmentsResult, allAppointmentsResult, familyMembersResult] = await Promise.all([
+    supabase
+      .from('persons')
+      .select('id, first_name, last_name, photo_url')
+      .eq('family_id', familyId)
+      .order('created_at'),
+    supabase
+      .from('appointments')
+      .select('*, persons(first_name, last_name)')
+      .eq('family_id', familyId)
+      .eq('is_completed', false)
+      .gte('appointment_date', new Date().toISOString())
+      .order('appointment_date', { ascending: true })
+      .limit(5),
+    supabase
+      .from('appointments')
+      .select('id, person_id, appointment_date, is_completed, follow_up_needed, follow_up_date, doctor_name, title')
+      .eq('family_id', familyId),
+    supabase
+      .from('family_members')
+      .select('id')
+      .eq('family_id', familyId),
+  ])
 
   const personIds = personsResult.data?.map(p => p.id) ?? []
-  const conditionsResult = personIds.length > 0
-    ? await supabase.from('health_conditions').select('id, is_hereditary').in('person_id', personIds)
-    : { data: [] }
+  const [conditionsResult, medicationsResult, vaccinationsResult, metadataResult] = personIds.length > 0
+    ? await Promise.all([
+        supabase.from('health_conditions').select('id, person_id, name, status, is_hereditary').in('person_id', personIds),
+        supabase.from('medications').select('id, person_id, refill_due_date').in('person_id', personIds),
+        supabase.from('vaccinations').select('id, person_id, status, due_date').in('person_id', personIds),
+        supabase.from('person_health_metadata').select('person_id, last_checkup_date').in('person_id', personIds),
+      ])
+    : [{ data: [] }, { data: [] }, { data: [] }, { data: [] }]
 
   const memberCount = personsResult.data?.length ?? 0
   const upcomingAppointments = (appointmentsResult.data ?? []) as Appointment[]
   const nextAppointment = upcomingAppointments[0]
   const hereditaryCount = conditionsResult.data?.filter(c => c.is_hereditary).length ?? 0
   const conditionCount = conditionsResult.data?.length ?? 0
+  const today = new Date()
+  const todayIso = today.toISOString()
+  const inThirtyDays = new Date()
+  inThirtyDays.setDate(inThirtyDays.getDate() + 30)
+  const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1)
+  const nextMonthStart = new Date(today.getFullYear(), today.getMonth() + 1, 1)
+  const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1)
+  const allAppointments = allAppointmentsResult.data ?? []
+  const overdueAppointments = allAppointments.filter((appointment) =>
+    appointment.appointment_date < todayIso && !appointment.is_completed
+  ).length
+  const overdueFollowUps = allAppointments.filter((appointment) =>
+    appointment.follow_up_needed && appointment.follow_up_date && appointment.follow_up_date < todayIso
+  ).length
+  const overdueVaccinations = (vaccinationsResult.data ?? []).filter((vaccination) =>
+    vaccination.status === 'overdue' || Boolean(vaccination.due_date && vaccination.due_date < today.toISOString().slice(0, 10))
+  )
+  const refillsDueSoon = (medicationsResult.data ?? []).filter((medication) => {
+    if (!medication.refill_due_date) return false
+    return new Date(medication.refill_due_date) <= inThirtyDays
+  })
+  const activeConditionCount = (conditionsResult.data ?? []).filter((condition) =>
+    condition.status === 'active' || condition.status === 'chronic'
+  ).length
+  const recentCheckups = new Set(
+    (metadataResult.data ?? [])
+      .filter((metadata) => {
+        if (!metadata.last_checkup_date) return false
+        const checkupDate = new Date(metadata.last_checkup_date)
+        const fifteenMonthsAgo = new Date()
+        fifteenMonthsAgo.setMonth(fifteenMonthsAgo.getMonth() - 15)
+        return checkupDate >= fifteenMonthsAgo
+      })
+      .map((metadata) => metadata.person_id)
+  )
+  const missingRecentCheckups = Math.max(0, memberCount - recentCheckups.size)
+  const familyHealthScore = Math.max(
+    0,
+    100 -
+      overdueVaccinations.length * 10 -
+      overdueAppointments * 10 -
+      overdueFollowUps * 8 -
+      refillsDueSoon.length * 6 -
+      activeConditionCount * 3 -
+      missingRecentCheckups * 4
+  )
+  const thisMonthAppointments = allAppointments.filter((appointment) => {
+    const date = new Date(appointment.appointment_date)
+    return date >= thisMonthStart && date < nextMonthStart
+  }).length
+  const lastMonthAppointments = allAppointments.filter((appointment) => {
+    const date = new Date(appointment.appointment_date)
+    return date >= lastMonthStart && date < thisMonthStart
+  }).length
+  const nextAction = overdueVaccinations.length > 0
+    ? 'Review overdue vaccination'
+    : overdueFollowUps > 0
+      ? 'Complete appointment follow-up'
+      : refillsDueSoon.length > 0
+        ? 'Refill medication this month'
+        : missingRecentCheckups > 0
+          ? 'Add recent checkup dates'
+          : (familyMembersResult.data?.length ?? 0) <= 1
+            ? 'Invite a family member'
+            : 'No urgent action'
+  const personHealthStatus = new Map<string, 'red' | 'pink' | 'amber' | 'green'>(
+    personIds.map((id) => [id, 'green'])
+  )
+  for (const condition of conditionsResult.data ?? []) {
+    if (condition.is_hereditary) personHealthStatus.set(condition.person_id, 'pink')
+    if (condition.status === 'active' || condition.status === 'chronic') personHealthStatus.set(condition.person_id, 'red')
+  }
+  for (const appointment of upcomingAppointments) {
+    if (personHealthStatus.get(appointment.person_id) === 'green') personHealthStatus.set(appointment.person_id, 'amber')
+  }
+  for (const medication of refillsDueSoon) {
+    if (personHealthStatus.get(medication.person_id) === 'green') personHealthStatus.set(medication.person_id, 'amber')
+  }
 
   const familyRelation = familyMember.families as { name?: string } | { name?: string }[] | null
   const rawFamilyName = (Array.isArray(familyRelation) ? familyRelation[0]?.name : familyRelation?.name) ?? 'Your Family'
@@ -74,7 +166,7 @@ export default async function DashboardPage() {
             <div className="mt-5 flex flex-wrap gap-2">
               <Link href="/members/new" className={buttonVariants({})}>
                 <Plus className="h-4 w-4" />
-                Add health profile
+                Add Family Member
               </Link>
               <Link href="/settings" className={buttonVariants({ variant: 'outline' })}>
                 <UserPlus className="h-4 w-4" />
@@ -99,10 +191,18 @@ export default async function DashboardPage() {
                 </span>
               </div>
               <div className="flex -space-x-3">
-                {(personsResult.data ?? []).slice(0, 5).map((person) => (
+                {(personsResult.data ?? []).slice(0, 5).map((person) => {
+                  const dotTone = personHealthStatus.get(person.id) ?? 'green'
+                  const dotClasses = {
+                    green: 'bg-emerald-500',
+                    amber: 'bg-amber-500',
+                    red: 'bg-red-500',
+                    pink: 'bg-pink-500',
+                  }
+                  return (
                   <div
                     key={person.id}
-                    className="grid size-12 place-items-center overflow-hidden rounded-full border-4 border-white bg-primary/10 text-sm font-black text-primary shadow-sm"
+                    className="relative grid size-12 place-items-center overflow-hidden rounded-full border-4 border-white bg-primary/10 text-sm font-black text-primary shadow-sm"
                   >
                     {person.photo_url ? (
                       <img
@@ -113,12 +213,44 @@ export default async function DashboardPage() {
                     ) : (
                       `${person.first_name[0]}${person.last_name?.[0] ?? ''}`.toUpperCase()
                     )}
+                    <span className={`absolute bottom-0 right-0 size-3 rounded-full border-2 border-white ${dotClasses[dotTone]}`} />
                   </div>
-                ))}
+                )})}
               </div>
             </div>
           </Link>
         </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-4">
+        <MetricCard
+          href="/members"
+          icon={ShieldCheck}
+          title="Family Health Score"
+          value={`${familyHealthScore}`}
+          copy={`${overdueVaccinations.length} overdue vaccines, ${refillsDueSoon.length} refills soon`}
+        />
+        <MetricCard
+          href={nextAction === 'Invite a family member' ? '/settings' : '/appointments'}
+          icon={BellRing}
+          title="Next Action Needed"
+          value={nextAction}
+          copy="Prioritized from overdue care, refills, checkups, and family setup"
+        />
+        <MetricCard
+          href="/appointments"
+          icon={TrendingUp}
+          title="Appointments"
+          value={`${thisMonthAppointments} this month`}
+          copy={`${thisMonthAppointments - lastMonthAppointments >= 0 ? '+' : ''}${thisMonthAppointments - lastMonthAppointments} vs last month`}
+        />
+        <MetricCard
+          href="/members"
+          icon={Pill}
+          title="Refills Needed"
+          value={`${refillsDueSoon.length}`}
+          copy="Medications due in the next 30 days"
+        />
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -198,7 +330,7 @@ export default async function DashboardPage() {
           copy="Use the visual map to see family connections and jump into profiles."
         />
         <NextStep
-          href="/members/new"
+          href="/members"
           icon={Activity}
           title="Add health context"
           copy="Record conditions, medications, allergies, and notes for each person."
@@ -249,7 +381,7 @@ export default async function DashboardPage() {
                 </div>
               </div>
               <div className="inline-flex items-center gap-2 text-sm font-bold text-primary">
-                <Link href="/appointments" className="inline-flex items-center gap-2">
+                <Link href="/appointments" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
                   Review appointment
                 <ArrowRight className="h-4 w-4" />
                 </Link>
@@ -307,6 +439,34 @@ function NextStep({
       </div>
       <p className="font-black">{title}</p>
       <p className="mt-1 text-sm leading-5 text-muted-foreground">{copy}</p>
+    </Link>
+  )
+}
+
+function MetricCard({
+  href,
+  icon: Icon,
+  title,
+  value,
+  copy,
+}: {
+  href: string
+  icon: typeof ShieldCheck
+  title: string
+  value: string
+  copy: string
+}) {
+  return (
+    <Link href={href} className="group rounded-3xl border border-white/70 bg-white/75 p-4 shadow-sm backdrop-blur transition-all hover:-translate-y-1 hover:bg-white hover:shadow-xl hover:shadow-slate-900/10">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="grid size-10 place-items-center rounded-2xl bg-primary/10 text-primary">
+          <Icon className="h-5 w-5" />
+        </div>
+        <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+      </div>
+      <p className="text-xs font-black uppercase tracking-[0.14em] text-muted-foreground">{title}</p>
+      <p className="mt-2 text-lg font-black leading-tight">{value}</p>
+      <p className="mt-1 text-xs leading-5 text-muted-foreground">{copy}</p>
     </Link>
   )
 }

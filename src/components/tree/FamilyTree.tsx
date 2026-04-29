@@ -32,6 +32,7 @@ export type PersonNodeData = {
   photoUrl: string | null
   activeConditions: number
   hereditaryConditions: number
+  sharedHereditaryRisks: number
   medicationCount: number
   allergyCount: number
   upcomingAppointments: {
@@ -50,7 +51,7 @@ type PersonFlowNode = Node<PersonNodeData, 'person'>
 // ─── Health helpers ───────────────────────────────────────────────────────────
 
 function healthStatus(d: PersonNodeData): 'hereditary' | 'active' | 'managed' | 'healthy' {
-  if (d.hereditaryConditions > 0) return 'hereditary'
+  if (d.hereditaryConditions > 0 || d.sharedHereditaryRisks > 0) return 'hereditary'
   if (d.activeConditions > 0) return 'active'
   if (d.medicationCount > 0 || d.allergyCount > 0) return 'managed'
   return 'healthy'
@@ -96,6 +97,7 @@ function PersonNode({ data }: NodeProps<PersonFlowNode>) {
   const hasHealth =
     data.activeConditions > 0 ||
     data.hereditaryConditions > 0 ||
+    data.sharedHereditaryRisks > 0 ||
     data.medicationCount > 0 ||
     data.allergyCount > 0
 
@@ -274,6 +276,26 @@ function PersonNode({ data }: NodeProps<PersonFlowNode>) {
             ))}
           </div>
         )}
+
+        {data.sharedHereditaryRisks > 0 && (
+          <div
+            title="Shared hereditary pattern"
+            style={{
+              margin: '7px auto 0',
+              width: 'fit-content',
+              borderRadius: 999,
+              background: '#fff1f2',
+              color: '#be123c',
+              border: '1px solid #fecdd3',
+              padding: '2px 7px',
+              fontSize: 10,
+              fontWeight: 900,
+              lineHeight: 1,
+            }}
+          >
+            Shared risk
+          </div>
+        )}
       </div>
 
       {/* Source handles */}
@@ -317,6 +339,7 @@ function HealthPreviewPanel({ person }: { person: PersonNodeData | null }) {
   const hasHealth =
     person.activeConditions > 0 ||
     person.hereditaryConditions > 0 ||
+    person.sharedHereditaryRisks > 0 ||
     person.medicationCount > 0 ||
     person.allergyCount > 0
 
@@ -344,10 +367,16 @@ function HealthPreviewPanel({ person }: { person: PersonNodeData | null }) {
 
       <div className="mt-4 grid grid-cols-2 gap-2">
         <PreviewMetric icon={Activity} label="Conditions" value={person.activeConditions} color="#f59e0b" />
-        <PreviewMetric icon={ShieldAlert} label="Risks" value={person.hereditaryConditions} color="#f43f5e" />
+        <PreviewMetric icon={ShieldAlert} label="Risks" value={person.hereditaryConditions + person.sharedHereditaryRisks} color="#f43f5e" />
         <PreviewMetric icon={Pill} label="Meds" value={person.medicationCount} color="#3b82f6" />
         <PreviewMetric icon={Sparkles} label="Allergies" value={person.allergyCount} color="#a855f7" />
       </div>
+
+      {person.sharedHereditaryRisks > 0 && (
+        <div className="mt-3 rounded-xl border border-rose-100 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700">
+          Shared hereditary pattern appears in this family.
+        </div>
+      )}
 
       {!hasHealth && (
         <div className="mt-3 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700">

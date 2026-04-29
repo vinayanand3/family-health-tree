@@ -2,6 +2,7 @@ export type UserRole = 'admin' | 'member' | 'viewer'
 export type RelationshipType = 'parent' | 'child' | 'spouse' | 'sibling'
 export type ConditionStatus = 'active' | 'resolved' | 'chronic'
 export type AllergySeverity = 'mild' | 'moderate' | 'severe'
+export type VaccinationStatus = 'up_to_date' | 'due' | 'overdue' | 'scheduled'
 
 export interface Family {
   id: string
@@ -58,6 +59,10 @@ export interface Medication {
   frequency: string | null
   start_date: string | null
   end_date: string | null
+  refill_due_date: string | null
+  pharmacy: string | null
+  prescriber: string | null
+  reminder_enabled: boolean
   notes: string | null
   created_at: string
 }
@@ -80,9 +85,51 @@ export interface Appointment {
   appointment_date: string
   notes: string | null
   is_completed: boolean
+  outcome_notes: string | null
+  follow_up_needed: boolean
+  follow_up_date: string | null
+  completed_at: string | null
   created_by: string
   created_at: string
   persons?: Pick<Person, 'first_name' | 'last_name'>
+}
+
+export interface Vaccination {
+  id: string
+  person_id: string
+  vaccine_name: string
+  dose_label: string | null
+  administered_date: string | null
+  due_date: string | null
+  status: VaccinationStatus
+  provider: string | null
+  notes: string | null
+  created_at: string
+}
+
+export interface PersonHealthMetadata {
+  person_id: string
+  blood_type: string | null
+  last_checkup_date: string | null
+  emergency_contact_name: string | null
+  emergency_contact_phone: string | null
+  emergency_contact_relationship: string | null
+  insurance_provider: string | null
+  insurance_member_id: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface HealthMeasurement {
+  id: string
+  person_id: string
+  measured_at: string
+  height_cm: number | null
+  weight_kg: number | null
+  bmi: number | null
+  growth_percentile: number | null
+  notes: string | null
+  created_at: string
 }
 
 export interface Document {

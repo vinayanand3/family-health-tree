@@ -22,6 +22,7 @@ type HealthCounts = Record<
   {
     activeConditions: number
     hereditaryConditions: number
+    sharedHereditaryRisks: number
     medicationCount: number
     allergyCount: number
   }
@@ -70,7 +71,7 @@ export default async function TreePage() {
       ? await Promise.all([
           supabase
             .from('health_conditions')
-            .select('person_id, status, is_hereditary')
+            .select('person_id, name, status, is_hereditary')
             .in('person_id', personIds),
           supabase
             .from('medications')
@@ -96,18 +97,40 @@ export default async function TreePage() {
       {
         activeConditions: 0,
         hereditaryConditions: 0,
+        sharedHereditaryRisks: 0,
         medicationCount: 0,
         allergyCount: 0,
       },
     ])
   )
 
+  const hereditaryNameCounts = new Map<string, Set<string>>()
   for (const condition of conditionsResult.data ?? []) {
     const count = healthCounts[condition.person_id]
     if (!count) continue
     if (condition.status === 'active' || condition.status === 'chronic')
       count.activeConditions += 1
-    if (condition.is_hereditary) count.hereditaryConditions += 1
+    if (condition.is_hereditary) {
+      count.hereditaryConditions += 1
+      const key = condition.name.trim().toLowerCase()
+      if (key) {
+        const familyMembers = hereditaryNameCounts.get(key) ?? new Set<string>()
+        familyMembers.add(condition.person_id)
+        hereditaryNameCounts.set(key, familyMembers)
+      }
+    }
+  }
+  const sharedHereditaryNames = new Set(
+    [...hereditaryNameCounts.entries()]
+      .filter(([, familyMembers]) => familyMembers.size > 1)
+      .map(([name]) => name)
+  )
+  for (const condition of conditionsResult.data ?? []) {
+    if (!condition.is_hereditary) continue
+    const key = condition.name.trim().toLowerCase()
+    if (sharedHereditaryNames.has(key) && healthCounts[condition.person_id]) {
+      healthCounts[condition.person_id].sharedHereditaryRisks += 1
+    }
   }
   for (const med of medsResult.data ?? []) {
     if (healthCounts[med.person_id]) healthCounts[med.person_id].medicationCount += 1
@@ -144,6 +167,7 @@ export default async function TreePage() {
     ...(healthCounts[p.id] ?? {
       activeConditions: 0,
       hereditaryConditions: 0,
+      sharedHereditaryRisks: 0,
       medicationCount: 0,
       allergyCount: 0,
     }),
@@ -157,7 +181,7 @@ export default async function TreePage() {
     0
   )
   const hereditaryRiskCount = personNodes.reduce(
-    (sum, person) => sum + person.hereditaryConditions,
+    (sum, person) => sum + person.hereditaryConditions + person.sharedHereditaryRisks,
     0
   )
   const upcomingVisitCount = personNodes.reduce(

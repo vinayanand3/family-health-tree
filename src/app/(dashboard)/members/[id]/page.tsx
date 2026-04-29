@@ -1,16 +1,18 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { HealthSummary } from '@/components/members/HealthSummary'
+import { MemberMetricsPanel } from '@/components/members/MemberMetricsPanel'
+import { VaccinationTracker } from '@/components/members/VaccinationTracker'
 import { AppointmentList } from '@/components/appointments/AppointmentList'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { format } from 'date-fns'
+import { differenceInYears, format } from 'date-fns'
 import Link from 'next/link'
-import { Activity, ArrowLeft, CalendarDays, FileText, GitFork, Pencil, Pill } from 'lucide-react'
-import { Allergy, Appointment, HealthCondition, Medication, Person, Relationship } from '@/types'
+import { Activity, ArrowLeft, CalendarDays, FileText, GitFork, HeartPulse, Pencil, Pill, ShieldCheck, Syringe } from 'lucide-react'
+import { Allergy, Appointment, HealthCondition, HealthMeasurement, Medication, Person, PersonHealthMetadata, Relationship, Vaccination } from '@/types'
 import { describeRelationship } from '@/lib/relationships'
 
 function uniqueVisibleRelationships(relationships: Relationship[]) {
@@ -38,12 +40,15 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
   const { id } = await params
   const supabase = await createClient()
 
-  const [personResult, conditionsResult, medsResult, allergiesResult, appointmentsResult] = await Promise.all([
+  const [personResult, conditionsResult, medsResult, allergiesResult, appointmentsResult, vaccinationsResult, metadataResult, measurementsResult] = await Promise.all([
     supabase.from('persons').select('*').eq('id', id).single(),
     supabase.from('health_conditions').select('*').eq('person_id', id).order('created_at', { ascending: false }),
     supabase.from('medications').select('*').eq('person_id', id).order('created_at', { ascending: false }),
     supabase.from('allergies').select('*').eq('person_id', id),
     supabase.from('appointments').select('*').eq('person_id', id).order('appointment_date', { ascending: false }),
+    supabase.from('vaccinations').select('*').eq('person_id', id).order('due_date', { ascending: true, nullsFirst: false }),
+    supabase.from('person_health_metadata').select('*').eq('person_id', id).maybeSingle(),
+    supabase.from('health_measurements').select('*').eq('person_id', id).order('measured_at', { ascending: false }),
   ])
 
   if (!personResult.data) notFound()
@@ -61,6 +66,9 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
   const medications = (medsResult.data ?? []) as Medication[]
   const allergies = (allergiesResult.data ?? []) as Allergy[]
   const appointments = (appointmentsResult.data ?? []) as Appointment[]
+  const vaccinations = (vaccinationsResult.data ?? []) as Vaccination[]
+  const metadata = (metadataResult.data ?? null) as PersonHealthMetadata | null
+  const measurements = (measurementsResult.data ?? []) as HealthMeasurement[]
   const persons = (personsResult.data ?? []) as Person[]
   const relationships = (relationshipsResult.data ?? []) as Relationship[]
   const visibleRelationships = uniqueVisibleRelationships(relationships)
@@ -68,9 +76,55 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
 
   const initials = `${person.first_name[0]}${person.last_name?.[0] ?? ''}`.toUpperCase()
   const activeConditionCount = conditions.filter((condition) => condition.status === 'active' || condition.status === 'chronic').length
+  const age = person.date_of_birth ? differenceInYears(new Date(), new Date(person.date_of_birth)) : null
+  const isChild = age !== null && age < 18
+  const latestMeasurement = measurements[0]
+  const overdueVaccines = vaccinations.filter((vaccination) => {
+    if (vaccination.status === 'overdue') return true
+    return Boolean(vaccination.due_date && vaccination.due_date < new Date().toISOString().slice(0, 10))
+  }).length
+  const refillDueSoon = medications.filter((medication) => {
+    if (!medication.refill_due_date) return false
+    const due = new Date(medication.refill_due_date)
+    const inThirty = new Date()
+    inThirty.setDate(inThirty.getDate() + 30)
+    return due <= inThirty
+  }).length
   const nextAppointment = appointments
     .filter((appointment) => appointment.appointment_date >= new Date().toISOString() && !appointment.is_completed)
     .sort((a, b) => new Date(a.appointment_date).getTime() - new Date(b.appointment_date).getTime())[0]
+  const timeline = [
+    ...appointments
+      .filter((appointment) => appointment.completed_at || appointment.outcome_notes)
+      .map((appointment) => ({
+        date: appointment.completed_at ?? appointment.appointment_date,
+        title: appointment.title,
+        detail: appointment.outcome_notes ?? appointment.notes ?? 'Visit completed',
+        kind: 'Appointment',
+      })),
+    ...vaccinations.map((vaccination) => ({
+      date: vaccination.administered_date ?? vaccination.due_date ?? vaccination.created_at,
+      title: vaccination.vaccine_name,
+      detail: vaccination.dose_label ?? vaccination.status.replaceAll('_', ' '),
+      kind: 'Vaccination',
+    })),
+    ...measurements.map((measurement) => ({
+      date: measurement.measured_at,
+      title: 'Measurement recorded',
+      detail: [
+        measurement.height_cm ? `${measurement.height_cm} cm` : null,
+        measurement.weight_kg ? `${measurement.weight_kg} kg` : null,
+        measurement.bmi ? `BMI ${measurement.bmi}` : null,
+      ].filter(Boolean).join(' · ') || measurement.notes || 'Health measurement',
+      kind: 'Measurement',
+    })),
+    ...conditions.map((condition) => ({
+      date: condition.diagnosed_date ?? condition.created_at,
+      title: condition.name,
+      detail: `${condition.status}${condition.is_hereditary ? ' · hereditary' : ''}`,
+      kind: 'Condition',
+    })),
+  ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
   return (
     <div className="max-w-5xl space-y-6">
@@ -105,11 +159,21 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
           </div>
           <div className="grid grid-cols-3 gap-2 sm:min-w-72">
             <ProfileMetric icon={Activity} label="Conditions" value={activeConditionCount} />
-            <ProfileMetric icon={Pill} label="Meds" value={medications.length} />
-            <ProfileMetric icon={CalendarDays} label="Visits" value={appointments.length} />
+            <ProfileMetric icon={Pill} label="Refills" value={refillDueSoon} />
+            <ProfileMetric icon={Syringe} label="Vaccines" value={overdueVaccines} />
           </div>
         </div>
       </div>
+
+      {isChild && (
+        <Card className="border-blue-200 bg-blue-50/80">
+          <CardContent className="grid gap-3 p-4 sm:grid-cols-3">
+            <PediatricMetric icon={Syringe} label="Vaccine attention" value={overdueVaccines > 0 ? `${overdueVaccines} overdue` : `${vaccinations.length} recorded`} />
+            <PediatricMetric icon={HeartPulse} label="Growth percentile" value={latestMeasurement?.growth_percentile ? `${latestMeasurement.growth_percentile}%` : 'Add growth'} />
+            <PediatricMetric icon={CalendarDays} label="Last checkup" value={metadata?.last_checkup_date ?? 'Add checkup'} />
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader className="pb-2">
@@ -143,10 +207,19 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
       <Tabs defaultValue="health">
         <TabsList>
           <TabsTrigger value="health">Health Overview</TabsTrigger>
+          <TabsTrigger value="vaccinations">Vaccinations ({vaccinations.length})</TabsTrigger>
+          <TabsTrigger value="metrics">Metrics</TabsTrigger>
+          <TabsTrigger value="timeline">Timeline</TabsTrigger>
           <TabsTrigger value="appointments">Appointments ({appointments.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="health" className="mt-4">
+          <div className="mb-4 grid gap-3 sm:grid-cols-4">
+            <TrendCard label="Checkup recency" value={metadata?.last_checkup_date ? format(new Date(metadata.last_checkup_date), 'PP') : 'Not recorded'} />
+            <TrendCard label="Active conditions" value={`${activeConditionCount}`} />
+            <TrendCard label="Upcoming care" value={`${nextAppointment ? 1 : 0}`} />
+            <TrendCard label="Refill status" value={refillDueSoon > 0 ? `${refillDueSoon} soon` : 'Clear'} />
+          </div>
           <HealthSummary
             personId={id}
             conditions={conditions}
@@ -210,6 +283,50 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
           </div>
         </TabsContent>
 
+        <TabsContent value="vaccinations" className="mt-4">
+          <VaccinationTracker personId={id} vaccinations={vaccinations} />
+        </TabsContent>
+
+        <TabsContent value="metrics" className="mt-4">
+          <MemberMetricsPanel
+            personId={id}
+            metadata={metadata}
+            measurements={measurements}
+            isChild={isChild}
+          />
+        </TabsContent>
+
+        <TabsContent value="timeline" className="mt-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <ShieldCheck className="h-4 w-4 text-primary" />
+                Health Timeline
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {timeline.length === 0 ? (
+                <div className="rounded-2xl border border-dashed bg-muted/20 p-4 text-sm text-muted-foreground">
+                  Health events will appear here after visits, vaccines, measurements, and conditions are recorded.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {timeline.slice(0, 12).map((item, index) => (
+                    <div key={`${item.kind}-${item.date}-${index}`} className="rounded-2xl border bg-white/80 p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="font-black">{item.title}</p>
+                        <Badge variant="outline">{item.kind}</Badge>
+                      </div>
+                      <p className="mt-1 text-sm text-muted-foreground">{item.detail}</p>
+                      <p className="mt-2 text-xs font-bold text-primary">{format(new Date(item.date), 'PP')}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="appointments" className="mt-4">
           <div className="flex justify-between items-center mb-4">
             <p className="text-sm text-muted-foreground">{appointments.length} total appointments</p>
@@ -217,9 +334,38 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
               Add Appointment
             </Link>
           </div>
-          <AppointmentList appointments={appointments} />
+          <AppointmentList appointments={appointments} persons={persons} editable />
         </TabsContent>
       </Tabs>
+    </div>
+  )
+}
+
+function TrendCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border bg-white/80 p-3 shadow-sm">
+      <p className="text-[11px] font-black uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
+      <p className="mt-1 text-sm font-black">{value}</p>
+    </div>
+  )
+}
+
+function PediatricMetric({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof Syringe
+  label: string
+  value: string
+}) {
+  return (
+    <div className="rounded-2xl bg-white/75 p-3">
+      <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.14em] text-blue-700">
+        <Icon className="h-3.5 w-3.5" />
+        {label}
+      </div>
+      <p className="mt-1 font-black text-blue-950">{value}</p>
     </div>
   )
 }

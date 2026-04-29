@@ -15,23 +15,27 @@ interface AppointmentFormProps {
   persons: Person[]
   onSubmit: (data: AppointmentFormData) => Promise<void>
   defaultPersonId?: string
+  defaultValues?: Partial<AppointmentFormData>
   isLoading?: boolean
   submitLabel?: string
   onCancel?: () => void
+  includeOutcomeFields?: boolean
 }
 
 export function AppointmentForm({
   persons,
   onSubmit,
   defaultPersonId,
+  defaultValues,
   isLoading,
   submitLabel = 'Save Appointment',
   onCancel,
+  includeOutcomeFields = false,
 }: AppointmentFormProps) {
-  const [selectedPersonId, setSelectedPersonId] = useState(defaultPersonId ?? '')
+  const [selectedPersonId, setSelectedPersonId] = useState(defaultValues?.person_id ?? defaultPersonId ?? '')
   const { register, handleSubmit, setValue, formState: { errors } } = useForm<AppointmentFormData>({
     resolver: zodResolver(appointmentSchema),
-    defaultValues: { person_id: defaultPersonId ?? '' },
+    defaultValues: { person_id: defaultPersonId ?? '', ...defaultValues },
   })
 
   const selectedPerson = persons.find(p => p.id === selectedPersonId)
@@ -94,6 +98,23 @@ export function AppointmentForm({
         <Label>Notes</Label>
         <Textarea {...register('notes')} placeholder="Any notes..." rows={3} />
       </div>
+
+      {includeOutcomeFields && (
+        <div className="space-y-3 rounded-xl border bg-muted/20 p-3">
+          <div className="space-y-1.5">
+            <Label>Visit outcome</Label>
+            <Textarea {...register('outcome_notes')} placeholder="What happened, what changed, what was prescribed..." rows={3} />
+          </div>
+          <label className="flex items-center gap-2 text-sm font-medium">
+            <input type="checkbox" {...register('follow_up_needed')} className="h-4 w-4 rounded border-input" />
+            Follow-up needed
+          </label>
+          <div className="space-y-1.5">
+            <Label>Follow-up date</Label>
+            <Input type="datetime-local" {...register('follow_up_date')} />
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-col gap-2 sm:flex-row">
         {onCancel && (

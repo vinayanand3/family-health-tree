@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Appointment, Person } from '@/types'
 import { AppointmentList } from '@/components/appointments/AppointmentList'
@@ -13,7 +13,6 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { EmptyStateIllustration } from '@/components/ui/EmptyStateIllustration'
 import { Plus, Search } from 'lucide-react'
-import Link from 'next/link'
 
 interface AppointmentsBrowserProps {
   upcoming: Appointment[]
@@ -29,6 +28,17 @@ export function AppointmentsBrowser({ upcoming, past, persons, familyId }: Appoi
   const [showInlineForm, setShowInlineForm] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const formRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    function openInlineForm() {
+      setShowInlineForm(true)
+      window.setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
+    }
+
+    window.addEventListener('familyhealth:add-appointment', openInlineForm)
+    return () => window.removeEventListener('familyhealth:add-appointment', openInlineForm)
+  }, [])
 
   const filterAppointments = useCallback((appointments: Appointment[]) => {
     const normalizedQuery = query.trim().toLowerCase()
@@ -94,7 +104,7 @@ export function AppointmentsBrowser({ upcoming, past, persons, familyId }: Appoi
       </div>
 
       {showInlineForm && (
-        <Card className="border-primary/20 bg-white/85 shadow-xl shadow-slate-900/10">
+        <Card ref={formRef} className="border-primary/20 bg-white/85 shadow-xl shadow-slate-900/10">
           <CardHeader>
             <CardTitle className="text-base">Add appointment</CardTitle>
           </CardHeader>
@@ -123,7 +133,7 @@ export function AppointmentsBrowser({ upcoming, past, persons, familyId }: Appoi
               copy="Try a different search, or add the next visit so everyone knows what is coming."
             />
           ) : (
-            <AppointmentList appointments={filteredUpcoming} showPerson />
+            <AppointmentList appointments={filteredUpcoming} showPerson persons={persons} editable />
           )}
         </TabsContent>
         <TabsContent value="past" className="mt-4">
@@ -133,7 +143,7 @@ export function AppointmentsBrowser({ upcoming, past, persons, familyId }: Appoi
               copy="Past visits will appear here once appointments are completed or their date has passed."
             />
           ) : (
-            <AppointmentList appointments={filteredPast} showPerson />
+            <AppointmentList appointments={filteredPast} showPerson persons={persons} editable />
           )}
         </TabsContent>
       </Tabs>
@@ -147,9 +157,13 @@ function AppointmentEmptyState({ title, copy }: { title: string; copy: string })
       <EmptyStateIllustration variant="calendar" />
       <p className="mt-3 font-black">{title}</p>
       <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">{copy}</p>
-      <Link href="/appointments/new" className={buttonVariants({ className: 'mt-5' })}>
+      <button
+        type="button"
+        className={buttonVariants({ className: 'mt-5' })}
+        onClick={() => window.dispatchEvent(new Event('familyhealth:add-appointment'))}
+      >
         Add appointment
-      </Link>
+      </button>
     </div>
   )
 }

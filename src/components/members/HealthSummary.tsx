@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select'
 import { EmptyStateIllustration } from '@/components/ui/EmptyStateIllustration'
-import { Pill, AlertTriangle, Activity, Plus } from 'lucide-react'
+import { Pill, AlertTriangle, Activity, Plus, ClipboardCheck, CalendarDays } from 'lucide-react'
 
 interface HealthSummaryProps {
   personId: string
@@ -60,6 +60,15 @@ function AddButton({ active, onClick }: { active: boolean; onClick: () => void }
   )
 }
 
+function daysUntil(value: string | null) {
+  if (!value) return null
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const due = new Date(value)
+  due.setHours(0, 0, 0, 0)
+  return Math.ceil((due.getTime() - today.getTime()) / 86_400_000)
+}
+
 function EmptyHealthState({
   icon: Icon,
   title,
@@ -87,6 +96,7 @@ export function HealthSummary({ personId, conditions, medications, allergies }: 
   const [allergySeverity, setAllergySeverity] = useState<AllergySeverity>('mild')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const isNewProfile = conditions.length === 0 && medications.length === 0 && allergies.length === 0
 
   function toggleForm(form: OpenForm) {
     setError('')
@@ -131,6 +141,10 @@ export function HealthSummary({ personId, conditions, medications, allergies }: 
       frequency: emptyToNull(form.get('frequency')),
       start_date: emptyToNull(form.get('start_date')),
       end_date: emptyToNull(form.get('end_date')),
+      refill_due_date: emptyToNull(form.get('refill_due_date')),
+      pharmacy: emptyToNull(form.get('pharmacy')),
+      prescriber: emptyToNull(form.get('prescriber')),
+      reminder_enabled: form.get('reminder_enabled') === 'on',
       notes: emptyToNull(form.get('notes')),
     })
 
@@ -169,6 +183,63 @@ export function HealthSummary({ personId, conditions, medications, allergies }: 
 
   return (
     <div className="grid gap-4 md:grid-cols-3">
+      {isNewProfile && (
+        <Card className="md:col-span-3 border-primary/20 bg-primary/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <ClipboardCheck className="h-4 w-4 text-primary" />
+              Start building this health profile
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+              {[
+                ['Add condition', 'condition'],
+                ['Add medication', 'medication'],
+                ['Add allergy', 'allergy'],
+                ['Add appointment', 'appointment'],
+                ['Add notes', 'notes'],
+              ].map(([label, target]) => {
+                if (target === 'appointment') {
+                  return (
+                    <a
+                      key={label}
+                      href={`/appointments/new?person=${personId}`}
+                      className="rounded-2xl border bg-white/75 px-3 py-3 text-sm font-black transition-colors hover:bg-white"
+                    >
+                      {label}
+                    </a>
+                  )
+                }
+
+                if (target === 'notes') {
+                  return (
+                    <a
+                      key={label}
+                      href={`/members/${personId}/edit`}
+                      className="rounded-2xl border bg-white/75 px-3 py-3 text-sm font-black transition-colors hover:bg-white"
+                    >
+                      {label}
+                    </a>
+                  )
+                }
+
+                return (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => toggleForm(target as OpenForm)}
+                    className="rounded-2xl border bg-white/75 px-3 py-3 text-left text-sm font-black transition-colors hover:bg-white"
+                  >
+                    {label}
+                  </button>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-3 pb-2">
           <CardTitle className="flex items-center gap-2 text-sm">
@@ -261,10 +332,28 @@ export function HealthSummary({ personId, conditions, medications, allergies }: 
             <ul className="space-y-2">
               {medications.map((m) => (
                 <li key={m.id}>
-                  <p className="text-sm font-medium">{m.name}</p>
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-sm font-medium">{m.name}</p>
+                    {m.refill_due_date && (
+                      <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                        (daysUntil(m.refill_due_date) ?? 99) < 0
+                          ? 'bg-red-100 text-red-700'
+                          : (daysUntil(m.refill_due_date) ?? 99) <= 30
+                            ? 'bg-amber-100 text-amber-700'
+                            : 'bg-blue-50 text-blue-700'
+                      }`}>
+                        Refill {daysUntil(m.refill_due_date)! < 0 ? 'overdue' : `in ${daysUntil(m.refill_due_date)}d`}
+                      </span>
+                    )}
+                  </div>
                   {(m.dosage || m.frequency) && (
                     <p className="text-xs text-muted-foreground">
                       {[m.dosage, m.frequency].filter(Boolean).join(' · ')}
+                    </p>
+                  )}
+                  {(m.prescriber || m.pharmacy) && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {[m.prescriber, m.pharmacy].filter(Boolean).join(' · ')}
                     </p>
                   )}
                 </li>
@@ -298,7 +387,26 @@ export function HealthSummary({ personId, conditions, medications, allergies }: 
                   <Input name="end_date" type="date" />
                 </div>
               </div>
-              <Textarea name="notes" placeholder="Notes, prescribing doctor, refill details..." rows={2} />
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label>Refill due</Label>
+                  <Input name="refill_due_date" type="date" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Pharmacy</Label>
+                  <Input name="pharmacy" placeholder="CVS, Walgreens, local pharmacy" />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Prescriber</Label>
+                <Input name="prescriber" placeholder="Dr. Smith" />
+              </div>
+              <label className="flex items-center gap-2 text-sm">
+                <input name="reminder_enabled" type="checkbox" className="h-4 w-4 rounded border-input" />
+                <CalendarDays className="h-3.5 w-3.5 text-primary" />
+                Remind family before refill
+              </label>
+              <Textarea name="notes" placeholder="Notes, side effects, refill details..." rows={2} />
               <Button type="submit" size="sm" disabled={saving}>
                 {saving ? 'Saving...' : 'Save medication'}
               </Button>

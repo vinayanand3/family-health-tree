@@ -38,7 +38,7 @@ export function MemberCard({ person, conditions = [] }: MemberCardProps) {
 
   return (
     <Link href={`/members/${person.id}`}>
-      <Card className={`group h-full cursor-pointer border-l-4 bg-white/85 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-900/10 ${accentClass}`}>
+      <Card className={`group h-full min-h-56 cursor-pointer border-l-4 bg-white/85 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-900/10 ${accentClass}`}>
         <CardHeader className="pb-2">
           <div className="flex items-center gap-3">
             <Avatar className="size-14 ring-4">
@@ -62,7 +62,7 @@ export function MemberCard({ person, conditions = [] }: MemberCardProps) {
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="flex flex-wrap gap-2">
+          <div className="flex min-h-16 flex-wrap content-start gap-2">
             <Badge variant="outline" className={`text-xs ${statusClass}`}>
               <HeartPulse className="mr-1 h-3 w-3" />
               {status}
