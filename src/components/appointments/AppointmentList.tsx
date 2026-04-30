@@ -132,8 +132,8 @@ export function AppointmentList({ appointments, showPerson = false, persons = []
           <Card
             key={appt.id}
             className={cn(
-              'transition-all',
-              needsAttention ? 'border-primary/30 bg-primary/5' : isOverdue ? 'border-rose-200' : '',
+              'bg-white/95 transition-all',
+              needsAttention ? 'border-primary/30' : isOverdue ? 'border-rose-200' : '',
               isOpen && 'shadow-lg shadow-slate-900/10'
             )}
           >

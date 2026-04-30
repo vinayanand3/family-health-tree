@@ -144,13 +144,13 @@ export function AppointmentForm({
         </div>
       )}
 
-      <div className="flex flex-col gap-2 sm:flex-row">
+      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         {onCancel && (
-          <Button type="button" variant="outline" className="w-full" onClick={onCancel} disabled={isLoading}>
+          <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={onCancel} disabled={isLoading}>
             Cancel
           </Button>
         )}
-        <Button type="submit" className="w-full" disabled={isLoading}>
+        <Button type="submit" className="w-full sm:w-auto" disabled={isLoading}>
           {isLoading ? 'Saving...' : submitLabel}
         </Button>
       </div>
