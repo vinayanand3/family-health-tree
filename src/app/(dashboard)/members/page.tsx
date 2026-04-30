@@ -5,15 +5,16 @@ import { buttonVariants } from '@/components/ui/button'
 import { EmptyStateIllustration } from '@/components/ui/EmptyStateIllustration'
 import Link from 'next/link'
 import { HeartPulse, UserPlus, X } from 'lucide-react'
-import { HealthCondition, Person } from '@/types'
+import { HealthCondition, Person, PersonHealthMetadata } from '@/types'
 
+type HealthFilter = 'conditions' | 'hereditary' | 'checkups' | null
 type MembersSearchParams = Promise<{ health?: string }>
 
 export default async function MembersPage({ searchParams }: { searchParams?: MembersSearchParams }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const params = searchParams ? await searchParams : {}
-  const healthFilter = params.health === 'conditions' || params.health === 'hereditary'
+  const healthFilter: HealthFilter = params.health === 'conditions' || params.health === 'hereditary' || params.health === 'checkups'
     ? params.health
     : null
 
@@ -34,6 +35,9 @@ export default async function MembersPage({ searchParams }: { searchParams?: Mem
   const { data: conditions } = persons?.length
     ? await supabase.from('health_conditions').select('*').in('person_id', persons.map(p => p.id))
     : { data: [] }
+  const { data: metadata } = persons?.length
+    ? await supabase.from('person_health_metadata').select('person_id, last_checkup_date').in('person_id', persons.map(p => p.id))
+    : { data: [] }
 
   const conditionsByPerson = ((conditions ?? []) as HealthCondition[]).reduce<Record<string, HealthCondition[]>>((acc, c) => {
     if (!acc[c.person_id]) acc[c.person_id] = []
@@ -42,14 +46,28 @@ export default async function MembersPage({ searchParams }: { searchParams?: Mem
   }, {})
 
   const allPersons = (persons ?? []) as Person[]
+  const fifteenMonthsAgo = new Date()
+  fifteenMonthsAgo.setMonth(fifteenMonthsAgo.getMonth() - 15)
+  const recentCheckups = new Set(
+    ((metadata ?? []) as Pick<PersonHealthMetadata, 'person_id' | 'last_checkup_date'>[])
+      .filter((item) => item.last_checkup_date && new Date(item.last_checkup_date) >= fifteenMonthsAgo)
+      .map((item) => item.person_id)
+  )
+  const missingRecentCheckupIds = allPersons
+    .filter((person) => !recentCheckups.has(person.id))
+    .map((person) => person.id)
   const pageTitle = healthFilter === 'conditions'
     ? 'Members with health conditions'
     : healthFilter === 'hereditary'
       ? 'Members with hereditary markers'
-      : 'Members'
+      : healthFilter === 'checkups'
+        ? 'Members missing recent checkups'
+        : 'Members'
 
   const pageDescription = healthFilter
-    ? `Filtered view across ${allPersons.length} family members`
+    ? healthFilter === 'checkups'
+      ? `${missingRecentCheckupIds.length} members need a last checkup date recorded`
+      : `Filtered view across ${allPersons.length} family members`
     : `${allPersons.length} family members`
 
   return (
@@ -94,6 +112,7 @@ export default async function MembersPage({ searchParams }: { searchParams?: Mem
         <MembersBrowser
           persons={allPersons}
           conditionsByPerson={conditionsByPerson}
+          missingRecentCheckupIds={missingRecentCheckupIds}
           initialFilter={healthFilter}
         />
       )}

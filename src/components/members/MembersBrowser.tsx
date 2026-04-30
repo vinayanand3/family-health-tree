@@ -8,22 +8,24 @@ import { MemberCard } from '@/components/members/MemberCard'
 import { Input } from '@/components/ui/input'
 import { buttonVariants } from '@/components/ui/button'
 import { EmptyStateIllustration } from '@/components/ui/EmptyStateIllustration'
-import { Activity, Search, ShieldAlert, Users } from 'lucide-react'
+import { Activity, CalendarCheck2, Search, ShieldAlert, Users } from 'lucide-react'
 
 interface MembersBrowserProps {
   persons: Person[]
   conditionsByPerson: Record<string, HealthCondition[]>
-  initialFilter: 'conditions' | 'hereditary' | null
+  missingRecentCheckupIds: string[]
+  initialFilter: 'conditions' | 'hereditary' | 'checkups' | null
 }
 
-export function MembersBrowser({ persons, conditionsByPerson, initialFilter }: MembersBrowserProps) {
+export function MembersBrowser({ persons, conditionsByPerson, missingRecentCheckupIds, initialFilter }: MembersBrowserProps) {
   const router = useRouter()
   const [query, setQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState<'all' | 'conditions' | 'hereditary'>(
+  const [statusFilter, setStatusFilter] = useState<'all' | 'conditions' | 'hereditary' | 'checkups'>(
     initialFilter ?? 'all'
   )
+  const missingRecentCheckups = useMemo(() => new Set(missingRecentCheckupIds), [missingRecentCheckupIds])
 
-  function updateFilter(filter: 'all' | 'conditions' | 'hereditary') {
+  function updateFilter(filter: 'all' | 'conditions' | 'hereditary' | 'checkups') {
     setStatusFilter(filter)
     router.replace(filter === 'all' ? '/members' : `/members?health=${filter}`, { scroll: false })
   }
@@ -38,11 +40,12 @@ export function MembersBrowser({ persons, conditionsByPerson, initialFilter }: M
       const matchesFilter =
         statusFilter === 'all' ||
         (statusFilter === 'conditions' && conditions.length > 0) ||
-        (statusFilter === 'hereditary' && conditions.some((condition) => condition.is_hereditary))
+        (statusFilter === 'hereditary' && conditions.some((condition) => condition.is_hereditary)) ||
+        (statusFilter === 'checkups' && missingRecentCheckups.has(person.id))
 
       return matchesQuery && matchesFilter
     })
-  }, [conditionsByPerson, persons, query, statusFilter])
+  }, [conditionsByPerson, missingRecentCheckups, persons, query, statusFilter])
 
   return (
     <div className="space-y-4">
@@ -75,6 +78,12 @@ export function MembersBrowser({ persons, conditionsByPerson, initialFilter }: M
               onClick={() => updateFilter('hereditary')}
               icon={ShieldAlert}
               label="Hereditary"
+            />
+            <FilterButton
+              active={statusFilter === 'checkups'}
+              onClick={() => updateFilter('checkups')}
+              icon={CalendarCheck2}
+              label="Missing checkups"
             />
           </div>
         </div>

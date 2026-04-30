@@ -101,6 +101,9 @@ export default async function DashboardPage() {
       })
       .map((metadata) => metadata.person_id)
   )
+  const membersMissingRecentCheckups = (personsResult.data ?? []).filter((person) => !recentCheckups.has(person.id))
+  const missingRecentCheckupNames = membersMissingRecentCheckups
+    .map((person) => `${person.first_name} ${person.last_name ?? ''}`.trim())
   const missingRecentCheckups = Math.max(0, memberCount - recentCheckups.size)
   const familyHealthScore = Math.max(
     0,
@@ -149,6 +152,11 @@ export default async function DashboardPage() {
           : (familyMembersResult.data?.length ?? 0) <= 1
             ? 'Invite a family member'
             : 'No urgent action'
+  const nextActionHref = nextAction === 'Invite a family member'
+    ? '/settings'
+    : nextAction === 'Add recent checkup dates'
+      ? '/members?health=checkups'
+      : '/appointments'
   const personHealthStatus = new Map<string, 'red' | 'pink' | 'amber' | 'green'>(
     personIds.map((id) => [id, 'green'])
   )
@@ -243,7 +251,7 @@ export default async function DashboardPage() {
 
       <div className="grid gap-4 md:grid-cols-4">
         <MetricCard
-          href="/members"
+          href="/members?health=checkups"
           icon={ShieldCheck}
           title="Family Health Score"
           value={`${familyHealthScore}`}
@@ -254,15 +262,19 @@ export default async function DashboardPage() {
             `${overdueFollowUps} overdue follow-ups`,
             `${refillsDueSoon.length} refills due soon`,
             `${activeConditionCount} active conditions`,
-            `${missingRecentCheckups} missing recent checkups`,
+            missingRecentCheckups === 0
+              ? 'All members have recent checkups recorded'
+              : `${missingRecentCheckups} missing recent checkups: ${missingRecentCheckupNames.join(', ')}`,
           ]}
         />
         <MetricCard
-          href={nextAction === 'Invite a family member' ? '/settings' : '/appointments'}
+          href={nextActionHref}
           icon={BellRing}
           title="Next Action Needed"
           value={nextAction}
-          copy="Prioritized from overdue care, refills, checkups, and family setup"
+          copy={nextAction === 'Add recent checkup dates'
+            ? `Missing for ${missingRecentCheckupNames.join(', ')}`
+            : 'Prioritized from overdue care, refills, checkups, and family setup'}
         />
         <MetricCard
           href="/appointments"
