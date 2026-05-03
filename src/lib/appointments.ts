@@ -33,3 +33,14 @@ export function appointmentCategory(appointment: Pick<Appointment, 'title' | 'do
   if (text.includes('urgent') || text.includes('er ')) return 'Urgent'
   return 'General'
 }
+
+export function isRecentCompletedCheckup(
+  appointment: Pick<Appointment, 'title' | 'doctor_name' | 'appointment_type' | 'is_completed' | 'completed_at' | 'appointment_date'>,
+  since: Date
+) {
+  if (!appointment.is_completed) return false
+  if (appointmentCategory(appointment) !== 'Checkup') return false
+
+  const checkupDate = new Date(appointment.completed_at ?? appointment.appointment_date)
+  return checkupDate >= since
+}

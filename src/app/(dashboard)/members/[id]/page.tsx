@@ -15,6 +15,7 @@ import Link from 'next/link'
 import { Activity, ArrowLeft, CalendarDays, FileText, GitFork, HeartPulse, Pencil, Pill, ShieldCheck, Syringe } from 'lucide-react'
 import { Allergy, Appointment, HealthCondition, HealthMeasurement, Medication, Person, PersonHealthMetadata, Relationship, Vaccination } from '@/types'
 import { describeRelationship } from '@/lib/relationships'
+import { appointmentCategory } from '@/lib/appointments'
 
 function uniqueVisibleRelationships(relationships: Relationship[]) {
   const seen = new Set<string>()
@@ -94,6 +95,14 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
   const nextAppointment = appointments
     .filter((appointment) => appointment.appointment_date >= new Date().toISOString() && !appointment.is_completed)
     .sort((a, b) => new Date(a.appointment_date).getTime() - new Date(b.appointment_date).getTime())[0]
+  const latestCompletedCheckup = appointments
+    .filter((appointment) => appointment.is_completed && appointmentCategory(appointment) === 'Checkup')
+    .sort((a, b) => {
+      const bDate = new Date(b.completed_at ?? b.appointment_date).getTime()
+      const aDate = new Date(a.completed_at ?? a.appointment_date).getTime()
+      return bDate - aDate
+    })[0]
+  const latestCheckupDate = metadata?.last_checkup_date ?? latestCompletedCheckup?.completed_at ?? latestCompletedCheckup?.appointment_date ?? null
   const timeline = [
     ...appointments
       .filter((appointment) => appointment.completed_at || appointment.outcome_notes)
@@ -171,7 +180,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
           <CardContent className="grid gap-3 p-4 sm:grid-cols-3">
             <PediatricMetric icon={Syringe} label="Vaccine attention" value={overdueVaccines > 0 ? `${overdueVaccines} overdue` : `${vaccinations.length} recorded`} />
             <PediatricMetric icon={HeartPulse} label="Growth percentile" value={latestMeasurement?.growth_percentile ? `${latestMeasurement.growth_percentile}%` : 'Add growth'} />
-            <PediatricMetric icon={CalendarDays} label="Last checkup" value={metadata?.last_checkup_date ?? 'Add checkup'} />
+            <PediatricMetric icon={CalendarDays} label="Last checkup" value={latestCheckupDate ? format(new Date(latestCheckupDate), 'PP') : 'Add checkup'} />
           </CardContent>
         </Card>
       )}
@@ -216,7 +225,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
 
         <TabsContent value="health" className="mt-4">
           <div className="mb-4 grid gap-3 sm:grid-cols-4">
-            <TrendCard label="Checkup recency" value={metadata?.last_checkup_date ? format(new Date(metadata.last_checkup_date), 'PP') : 'Not recorded'} />
+            <TrendCard label="Checkup recency" value={latestCheckupDate ? format(new Date(latestCheckupDate), 'PP') : 'Not recorded'} />
             <TrendCard label="Active conditions" value={`${activeConditionCount}`} />
             <TrendCard label="Upcoming care" value={`${nextAppointment ? 1 : 0}`} />
             <TrendCard label="Refill status" value={refillDueSoon > 0 ? `${refillDueSoon} soon` : 'Clear'} />

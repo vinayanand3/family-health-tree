@@ -35,28 +35,28 @@ export default async function LandingPage() {
         </div>
       </nav>
 
-      <section className="relative min-h-[760px] overflow-hidden">
+      <section className="relative overflow-hidden">
         <Image
           src="/family-tree-landing.png"
           alt="Watercolor family tree illustration"
           fill
           priority
           sizes="100vw"
-          className="object-cover object-center"
+          className="hidden object-cover object-right opacity-[0.18] md:block"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-background via-background/88 to-background/20" />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/95" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(207,250,254,0.45),transparent_28rem),radial-gradient(circle_at_88%_8%,rgba(187,247,208,0.55),transparent_24rem)]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/92 to-background" />
 
-        <div className="relative mx-auto flex min-h-[760px] max-w-7xl flex-col justify-center px-5 py-16">
-          <div className="max-w-2xl">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-white/80 px-3 py-1.5 text-sm text-primary shadow-sm">
+        <div className="relative mx-auto flex min-h-[620px] max-w-7xl flex-col justify-center px-5 py-10 sm:py-12">
+          <div className="max-w-3xl">
+            <div className="mb-5 inline-flex max-w-full items-center gap-2 rounded-full border border-primary/20 bg-white/80 px-3 py-1.5 text-sm text-primary shadow-sm">
               <Sparkles className="h-3.5 w-3.5" />
-              Collaborative family health, mapped visually
+              <span className="truncate">Collaborative family health</span>
             </div>
-            <h1 className="max-w-3xl text-5xl font-black leading-[0.95] md:text-7xl">
+            <h1 className="max-w-3xl text-4xl font-black leading-[1.02] sm:text-5xl lg:text-6xl">
               Build a living family tree for every health story.
             </h1>
-            <p className="mb-8 mt-6 max-w-2xl text-lg leading-8 text-muted-foreground">
+            <p className="mb-6 mt-5 max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg sm:leading-8">
               Create your family tree, invite relatives, and keep appointments, conditions,
               medicines, allergies, and hereditary risks connected to the people they belong to.
             </p>
@@ -66,13 +66,13 @@ export default async function LandingPage() {
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
-            <div className="mt-10 grid max-w-xl grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="mt-8 grid max-w-2xl grid-cols-1 gap-3 sm:grid-cols-3">
               {[
                 ['Family members', 'Shared profiles'],
                 ['Appointments', 'Everyone can help'],
                 ['Hereditary risks', 'Easy to spot'],
               ].map(([title, copy]) => (
-                <div key={title} className="rounded-xl border border-border/70 bg-white/80 p-4 shadow-sm backdrop-blur">
+                <div key={title} className="rounded-xl border border-border/70 bg-white/88 p-4 shadow-sm backdrop-blur">
                   <p className="text-sm font-bold">{title}</p>
                   <p className="mt-1 text-xs text-muted-foreground">{copy}</p>
                 </div>
@@ -82,7 +82,7 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      <section className="border-t border-border/70 bg-white/60 py-16">
+      <section className="border-t border-border/70 bg-white/70 py-10 sm:py-12">
         <div className="max-w-7xl mx-auto px-5">
           <div className="grid md:grid-cols-3 gap-5">
             <div className="rounded-2xl border bg-card p-6 shadow-sm">

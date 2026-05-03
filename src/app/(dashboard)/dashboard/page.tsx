@@ -9,6 +9,7 @@ import { Users, CalendarDays, Activity, AlertTriangle, ArrowRight, BellRing, Map
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { Appointment } from '@/types'
+import { isRecentCompletedCheckup } from '@/lib/appointments'
 import { format } from 'date-fns'
 
 export default async function DashboardPage() {
@@ -43,7 +44,7 @@ export default async function DashboardPage() {
       .limit(5),
     supabase
       .from('appointments')
-      .select('id, person_id, appointment_date, appointment_type, is_completed, follow_up_needed, follow_up_date, doctor_name, title')
+      .select('id, person_id, appointment_date, appointment_type, is_completed, follow_up_needed, follow_up_date, completed_at, doctor_name, title')
       .eq('family_id', familyId),
     supabase
       .from('family_members')
@@ -90,17 +91,22 @@ export default async function DashboardPage() {
   const activeConditionCount = (conditionsResult.data ?? []).filter((condition) =>
     condition.status === 'active' || condition.status === 'chronic'
   ).length
+  const fifteenMonthsAgo = new Date()
+  fifteenMonthsAgo.setMonth(fifteenMonthsAgo.getMonth() - 15)
   const recentCheckups = new Set(
     (metadataResult.data ?? [])
       .filter((metadata) => {
         if (!metadata.last_checkup_date) return false
         const checkupDate = new Date(metadata.last_checkup_date)
-        const fifteenMonthsAgo = new Date()
-        fifteenMonthsAgo.setMonth(fifteenMonthsAgo.getMonth() - 15)
         return checkupDate >= fifteenMonthsAgo
       })
       .map((metadata) => metadata.person_id)
   )
+  for (const appointment of allAppointments) {
+    if (isRecentCompletedCheckup(appointment, fifteenMonthsAgo)) {
+      recentCheckups.add(appointment.person_id)
+    }
+  }
   const membersMissingRecentCheckups = (personsResult.data ?? []).filter((person) => !recentCheckups.has(person.id))
   const missingRecentCheckupNames = membersMissingRecentCheckups
     .map((person) => `${person.first_name} ${person.last_name ?? ''}`.trim())
