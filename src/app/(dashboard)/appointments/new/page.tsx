@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { AppointmentForm } from '@/components/appointments/AppointmentForm'
 import { AppointmentFormData } from '@/lib/validations/appointment'
+import { localDateTimeToIso } from '@/lib/appointment-dates'
 import { Person } from '@/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { buttonVariants } from '@/components/ui/button'
@@ -47,6 +48,8 @@ export default function NewAppointmentPage() {
 
     await supabase.from('appointments').insert({
       ...data,
+      appointment_date: localDateTimeToIso(data.appointment_date),
+      follow_up_date: data.follow_up_date ? localDateTimeToIso(data.follow_up_date) : null,
       family_id: familyId,
       created_by: user!.id,
     })

@@ -205,7 +205,7 @@ export function HealthSummary({ personId, conditions, medications, allergies }: 
                     <a
                       key={label}
                       href={`/appointments/new?person=${personId}`}
-                      className="rounded-2xl border bg-white/75 px-3 py-3 text-sm font-black transition-colors hover:bg-white"
+                      className="rounded-2xl border bg-white/75 px-3 py-3 text-sm font-black transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:bg-white hover:shadow-md active:translate-y-0"
                     >
                       {label}
                     </a>
@@ -217,7 +217,7 @@ export function HealthSummary({ personId, conditions, medications, allergies }: 
                     <a
                       key={label}
                       href={`/members/${personId}/edit`}
-                      className="rounded-2xl border bg-white/75 px-3 py-3 text-sm font-black transition-colors hover:bg-white"
+                      className="rounded-2xl border bg-white/75 px-3 py-3 text-sm font-black transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:bg-white hover:shadow-md active:translate-y-0"
                     >
                       {label}
                     </a>
@@ -229,7 +229,7 @@ export function HealthSummary({ personId, conditions, medications, allergies }: 
                     key={label}
                     type="button"
                     onClick={() => toggleForm(target as OpenForm)}
-                    className="rounded-2xl border bg-white/75 px-3 py-3 text-left text-sm font-black transition-colors hover:bg-white"
+                    className="rounded-2xl border bg-white/75 px-3 py-3 text-left text-sm font-black transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:bg-white hover:shadow-md active:translate-y-0"
                   >
                     {label}
                   </button>

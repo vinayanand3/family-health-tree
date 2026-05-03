@@ -6,6 +6,7 @@ import { Appointment, Person } from '@/types'
 import { AppointmentList } from '@/components/appointments/AppointmentList'
 import { AppointmentForm } from '@/components/appointments/AppointmentForm'
 import { AppointmentFormData } from '@/lib/validations/appointment'
+import { localDateTimeToIso } from '@/lib/appointment-dates'
 import { createClient } from '@/lib/supabase/client'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -69,6 +70,8 @@ export function AppointmentsBrowser({ upcoming, past, persons, familyId }: Appoi
     const { data: { user } } = await supabase.auth.getUser()
     const { error: insertError } = await supabase.from('appointments').insert({
       ...data,
+      appointment_date: localDateTimeToIso(data.appointment_date),
+      follow_up_date: data.follow_up_date ? localDateTimeToIso(data.follow_up_date) : null,
       family_id: familyId,
       created_by: user!.id,
     })

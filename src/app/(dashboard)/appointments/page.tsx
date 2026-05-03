@@ -3,11 +3,12 @@ import { redirect } from 'next/navigation'
 import { AppointmentsBrowser } from '@/components/appointments/AppointmentsBrowser'
 import { AppointmentReminderControls } from '@/components/appointments/AppointmentReminderControls'
 import { AppointmentCountdown } from '@/components/appointments/AppointmentCountdown'
+import { AppointmentDateTime } from '@/components/appointments/AppointmentDateTime'
 import { AddAppointmentTrigger } from '@/components/appointments/AddAppointmentTrigger'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Activity, BellRing, CalendarDays, MapPin, Stethoscope, TrendingUp, UserRound } from 'lucide-react'
 import { Appointment, Person } from '@/types'
-import { differenceInCalendarDays, format } from 'date-fns'
+import { differenceInCalendarDays } from 'date-fns'
 import { appointmentCategory } from '@/lib/appointments'
 
 export default async function AppointmentsPage() {
@@ -101,7 +102,7 @@ export default async function AppointmentsPage() {
                 <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                   <span className="flex items-center gap-1">
                     <CalendarDays className="h-3.5 w-3.5" />
-                    {format(new Date(nextAppointment.appointment_date), 'PPp')}
+                    <AppointmentDateTime value={nextAppointment.appointment_date} />
                   </span>
                   {nextAppointment.doctor_name && (
                     <span className="flex items-center gap-1">

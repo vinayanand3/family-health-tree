@@ -9,11 +9,13 @@ import { Button } from '@/components/ui/button'
 import { AppointmentForm } from '@/components/appointments/AppointmentForm'
 import { AppointmentReminderControls } from '@/components/appointments/AppointmentReminderControls'
 import { AppointmentCountdown } from '@/components/appointments/AppointmentCountdown'
+import { AppointmentDateTime } from '@/components/appointments/AppointmentDateTime'
 import { AppointmentFormData } from '@/lib/validations/appointment'
+import { isoToDateTimeLocal, localDateTimeToIso } from '@/lib/appointment-dates'
 import { appointmentCategory } from '@/lib/appointments'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
-import { differenceInCalendarDays, format, isPast } from 'date-fns'
+import { differenceInCalendarDays, isPast } from 'date-fns'
 import { BellRing, CalendarDays, CheckCircle2, ChevronDown, Edit3, FileText, MapPin, User } from 'lucide-react'
 
 interface AppointmentListProps {
@@ -23,14 +25,6 @@ interface AppointmentListProps {
   editable?: boolean
 }
 
-function toDateTimeLocal(value: string | null) {
-  if (!value) return ''
-  const date = new Date(value)
-  const offset = date.getTimezoneOffset()
-  const localDate = new Date(date.getTime() - offset * 60_000)
-  return localDate.toISOString().slice(0, 16)
-}
-
 function compactPayload(data: AppointmentFormData) {
   return {
     person_id: data.person_id,
@@ -38,11 +32,11 @@ function compactPayload(data: AppointmentFormData) {
     appointment_type: data.appointment_type || null,
     doctor_name: data.doctor_name || null,
     location: data.location || null,
-    appointment_date: data.appointment_date,
+    appointment_date: localDateTimeToIso(data.appointment_date),
     notes: data.notes || null,
     outcome_notes: data.outcome_notes || null,
     follow_up_needed: data.follow_up_needed ?? false,
-    follow_up_date: data.follow_up_date || null,
+    follow_up_date: data.follow_up_date ? localDateTimeToIso(data.follow_up_date) : null,
   }
 }
 
@@ -179,7 +173,7 @@ export function AppointmentList({ appointments, showPerson = false, persons = []
                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1">
                       <CalendarDays className="h-3 w-3" />
-                      {format(new Date(appt.appointment_date), 'PPp')}
+                      <AppointmentDateTime value={appt.appointment_date} />
                     </span>
                     {appt.doctor_name && (
                       <span className="flex items-center gap-1">
@@ -219,11 +213,11 @@ export function AppointmentList({ appointments, showPerson = false, persons = []
                           appointment_type: appt.appointment_type ?? undefined,
                           doctor_name: appt.doctor_name ?? '',
                           location: appt.location ?? '',
-                          appointment_date: toDateTimeLocal(appt.appointment_date),
+                          appointment_date: isoToDateTimeLocal(appt.appointment_date),
                           notes: appt.notes ?? '',
                           outcome_notes: appt.outcome_notes ?? '',
                           follow_up_needed: appt.follow_up_needed ?? false,
-                          follow_up_date: toDateTimeLocal(appt.follow_up_date),
+                          follow_up_date: isoToDateTimeLocal(appt.follow_up_date),
                         }}
                         onSubmit={(data) => updateAppointment(appt.id, data)}
                         isLoading={savingId === appt.id}
@@ -245,7 +239,7 @@ export function AppointmentList({ appointments, showPerson = false, persons = []
                             <p className="font-black text-amber-800">Follow-up needed</p>
                             <p className="mt-1 text-amber-700">
                               {appt.follow_up_date
-                                ? format(new Date(appt.follow_up_date), 'PPp')
+                                ? <AppointmentDateTime value={appt.follow_up_date} />
                                 : 'Date has not been set yet'}
                             </p>
                           </div>

@@ -5,6 +5,7 @@ import { MemberMetricsPanel } from '@/components/members/MemberMetricsPanel'
 import { VaccinationTracker } from '@/components/members/VaccinationTracker'
 import { AppointmentList } from '@/components/appointments/AppointmentList'
 import { AppointmentCountdown } from '@/components/appointments/AppointmentCountdown'
+import { AppointmentDateTime } from '@/components/appointments/AppointmentDateTime'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
@@ -277,7 +278,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
                     </div>
                     <p className="mt-1 text-sm text-muted-foreground">{nextAppointment.title}</p>
                     <p className="mt-2 text-xs font-bold text-primary">
-                      {format(new Date(nextAppointment.appointment_date), 'PPp')}
+                      <AppointmentDateTime value={nextAppointment.appointment_date} />
                     </p>
                   </div>
                 ) : (

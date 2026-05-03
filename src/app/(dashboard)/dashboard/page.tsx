@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { AppointmentList } from '@/components/appointments/AppointmentList'
 import { AppointmentReminderControls } from '@/components/appointments/AppointmentReminderControls'
 import { AppointmentCountdown } from '@/components/appointments/AppointmentCountdown'
+import { AppointmentDateTime } from '@/components/appointments/AppointmentDateTime'
 import { buttonVariants } from '@/components/ui/button'
 import { EmptyStateIllustration } from '@/components/ui/EmptyStateIllustration'
 import { Users, CalendarDays, Activity, AlertTriangle, ArrowRight, BellRing, MapPin, UserRound, TreePine, Plus, UserPlus, Pill, ShieldCheck, TrendingUp } from 'lucide-react'
@@ -10,7 +11,6 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { Appointment } from '@/types'
 import { isRecentCompletedCheckup } from '@/lib/appointments'
-import { format } from 'date-fns'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -130,6 +130,7 @@ export default async function DashboardPage() {
     const end = new Date(date.getFullYear(), date.getMonth() + 1, 1)
     return {
       label: date.toLocaleString('default', { month: 'short' }),
+      href: '/appointments',
       value: allAppointments.filter((appointment) => {
         const appointmentDate = new Date(appointment.appointment_date)
         return appointmentDate >= date && appointmentDate < end
@@ -137,11 +138,11 @@ export default async function DashboardPage() {
     }
   })
   const careLoadTrend = [
-    { label: 'Vacc', fullLabel: 'Overdue vaccines', value: overdueVaccinations.length },
-    { label: 'Visits', fullLabel: 'Overdue visits', value: overdueAppointments },
-    { label: 'Follow', fullLabel: 'Overdue follow-ups', value: overdueFollowUps },
-    { label: 'Refills', fullLabel: 'Refills due soon', value: refillsDueSoon.length },
-    { label: 'Cond', fullLabel: 'Active conditions', value: activeConditionCount },
+    { label: 'Vacc', fullLabel: 'Overdue vaccines', value: overdueVaccinations.length, href: '/members' },
+    { label: 'Visits', fullLabel: 'Overdue visits', value: overdueAppointments, href: '/appointments' },
+    { label: 'Follow', fullLabel: 'Overdue follow-ups', value: overdueFollowUps, href: '/appointments' },
+    { label: 'Refills', fullLabel: 'Refills due soon', value: refillsDueSoon.length, href: '/members' },
+    { label: 'Cond', fullLabel: 'Active conditions', value: activeConditionCount, href: '/members?health=conditions' },
   ]
   const lastMonthAppointments = allAppointments.filter((appointment) => {
     const date = new Date(appointment.appointment_date)
@@ -437,7 +438,7 @@ export default async function DashboardPage() {
                   <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1">
                       <CalendarDays className="h-3.5 w-3.5" />
-                      {format(new Date(nextAppointment.appointment_date), 'PPp')}
+                      <AppointmentDateTime value={nextAppointment.appointment_date} />
                     </span>
                     {nextAppointment.doctor_name && (
                       <span className="flex items-center gap-1">
@@ -578,7 +579,7 @@ function ChartCard({
 }: {
   title: string
   copy: string
-  data: { label: string; value: number; fullLabel?: string }[]
+  data: { label: string; value: number; fullLabel?: string; href: string }[]
   tone: 'primary' | 'rose'
 }) {
   const maxValue = Math.max(1, ...data.map((item) => item.value))
@@ -618,12 +619,16 @@ function ChartCard({
         </svg>
         <div className="mt-3 grid gap-2 sm:grid-cols-3">
           {data.map((item) => (
-            <div key={item.label} className="rounded-2xl border bg-white/75 p-2 text-center">
+            <Link
+              key={item.label}
+              href={item.href}
+              className="group rounded-2xl border bg-white/75 p-2 text-center transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:bg-white hover:shadow-md active:translate-y-0"
+            >
               <p className="text-sm font-black">{item.value}</p>
               <p className="break-words text-[11px] font-bold leading-tight text-muted-foreground">
                 {item.fullLabel ?? item.label}
               </p>
-            </div>
+            </Link>
           ))}
         </div>
       </CardContent>

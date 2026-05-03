@@ -20,6 +20,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Activity, CalendarDays, GitFork, Pill, ShieldAlert, Sparkles } from 'lucide-react'
 import { Relationship } from '@/types'
+import { formatAppointmentDateTime } from '@/lib/appointment-dates'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -79,12 +80,7 @@ const HEALTH_ITEMS = [
 ]
 
 function formatAppointmentDate(value: string) {
-  return new Intl.DateTimeFormat(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(new Date(value))
+  return formatAppointmentDateTime(value)
 }
 
 // ─── Person Node ──────────────────────────────────────────────────────────────
