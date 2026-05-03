@@ -132,14 +132,15 @@ export function AppointmentList({ appointments, showPerson = false, persons = []
             )}
           >
             <CardContent className="py-4">
-              <button
-                type="button"
-                className="flex w-full items-start justify-between gap-3 text-left"
-                onClick={() => {
-                  setEditingId(null)
-                  setOpenId(isOpen ? null : appt.id)
-                }}
-              >
+              <div className="flex w-full items-start justify-between gap-3">
+                <button
+                  type="button"
+                  className="flex min-w-0 flex-1 items-start gap-3 text-left"
+                  onClick={() => {
+                    setEditingId(null)
+                    setOpenId(isOpen ? null : appt.id)
+                  }}
+                >
                 <div className="space-y-1.5 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-medium text-sm">{appt.title}</p>
@@ -198,8 +199,36 @@ export function AppointmentList({ appointments, showPerson = false, persons = []
                     <p className="text-xs text-muted-foreground line-clamp-2">{appt.notes}</p>
                   )}
                 </div>
-                <ChevronDown className={cn('mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform', isOpen && 'rotate-180')} />
-              </button>
+                </button>
+                <div className="flex shrink-0 items-center gap-2">
+                  {editable && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 rounded-full px-3"
+                      onClick={() => {
+                        setOpenId(appt.id)
+                        setEditingId(appt.id)
+                      }}
+                    >
+                      <Edit3 className="h-3.5 w-3.5" />
+                      Edit
+                    </Button>
+                  )}
+                  <button
+                    type="button"
+                    className="rounded-full p-1 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                    aria-label={isOpen ? 'Collapse appointment details' : 'Expand appointment details'}
+                    onClick={() => {
+                      setEditingId(null)
+                      setOpenId(isOpen ? null : appt.id)
+                    }}
+                  >
+                    <ChevronDown className={cn('h-4 w-4 transition-transform', isOpen && 'rotate-180')} />
+                  </button>
+                </div>
+              </div>
 
               {isOpen && (
                 <div className="mt-4 border-t pt-4" onClick={(event) => event.stopPropagation()}>
